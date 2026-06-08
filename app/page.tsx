@@ -1,65 +1,147 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
+import { GlassTabBar } from '@/components/ui/GlassTabBar'
+import { FAB } from '@/components/ui/FAB'
+import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
+import { OnboardingWizard } from '@/components/ui/OnboardingWizard'
+import { AppWalkthrough } from '@/components/ui/AppWalkthrough'
+import { AckProvider } from '@/components/ui/ActionConfirmation'
+import { HomeScreen }    from './components/HomeScreen'
+import { SearchScreen }  from './components/SearchScreen'
+import { ScanScreen }    from './components/ScanScreen'
+import { GharScreen }    from './components/GharScreen'
+import { ProfileScreen } from './components/ProfileScreen'
+
+export default function AppShell() {
+  const router = useRouter()
+  const [authed, setAuthed]               = useState(false)
+  const [activeTab, setActiveTab]         = useState(0)
+  const [sheetOpen, setSheetOpen]         = useState(false)
+  const [refreshKey, setRefreshKey]       = useState(0)
+  const [userInitial, setUserInitial]     = useState('')
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
+
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const appContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        if (!localStorage.getItem('milakya_intro_seen')) {
+          router.replace('/intro')
+        } else {
+          router.replace('/auth/login')
+        }
+        return
+      }
+
+      if (!localStorage.getItem('milakya_onboarded')) {
+        const { data: homes } = await supabase.from('homes').select('id').limit(1)
+        if (!homes || homes.length === 0) {
+          setShowOnboarding(true)
+        } else {
+          localStorage.setItem('milakya_onboarded', '1')
+          if (!localStorage.getItem('milakya_walkthrough_seen')) setShowWalkthrough(true)
+        }
+      } else if (!localStorage.getItem('milakya_walkthrough_seen')) {
+        setShowWalkthrough(true)
+      }
+
+      setAuthed(true)
+    })
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      const meta = user.user_metadata ?? {}
+      const name = meta.full_name ?? meta.name ?? user.email ?? ''
+      setUserInitial(name[0]?.toUpperCase() ?? '?')
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) router.replace('/auth/login')
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
+
+  function handleTabChange(index: number) {
+    setActiveTab(index)
+    if (sliderRef.current) {
+      sliderRef.current.style.transform = `translateX(-${index * 20}%)`
+    }
+  }
+
+  const handleItemAdded = useCallback(() => { setRefreshKey((k) => k + 1) }, [])
+
+  if (!authed) return null
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    // AckProvider wraps everything — position:fixed overlay renders here, above all tabs
+    <AckProvider>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100dvh', background: 'var(--bg-base)' }}>
+        <div
+          ref={appContainerRef}
+          style={{
+            width: '100%', maxWidth: 430, height: '100dvh',
+            background: 'var(--bg-base)', position: 'relative',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            overscrollBehavior: 'none',
+          }}
+        >
+          <div ref={sliderRef} className="tab-slider" style={{ flex: 1 }}>
+            {[0,1,2,3,4].map((i) => (
+              <div key={i} className="tab-slide scrollbar-hide">
+                {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} />
+                : i === 1 ? <SearchScreen onMutated={handleItemAdded} />
+                : i === 2 ? <ScanScreen onAdded={handleItemAdded} />
+                : i === 3 ? <GharScreen isVisible={activeTab === 3} onActiveHomeChanged={handleItemAdded} refreshKey={refreshKey} />
+                : <ProfileScreen />}
+              </div>
+            ))}
+          </div>
+
+          {!showOnboarding && (
+            <>
+              <div className="fab" style={{
+                opacity: activeTab === 2 || showWalkthrough ? 0 : 1,
+                transform: activeTab === 2 || showWalkthrough ? 'scale(0.6)' : 'scale(1)',
+                pointerEvents: activeTab === 2 || showWalkthrough ? 'none' : 'auto',
+                transition: 'opacity 200ms ease, transform 200ms var(--spring)',
+              }}>
+                <FAB onClick={() => setSheetOpen(true)} />
+              </div>
+              <GlassTabBar activeTab={activeTab} onTabChange={handleTabChange} userInitial={userInitial} />
+            </>
+          )}
+
+          <QuickAddSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} onAdded={handleItemAdded} />
+
+          {showOnboarding && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 100, overflowY: 'auto', overscrollBehavior: 'contain', background: 'var(--bg-base)' }}>
+              <OnboardingWizard onComplete={() => {
+                localStorage.setItem('milakya_onboarded', '1')
+                setShowOnboarding(false)
+                setRefreshKey(k => k + 1)
+                setShowWalkthrough(true)
+              }} />
+            </div>
+          )}
+
+          {showWalkthrough && (
+            <AppWalkthrough
+              containerRef={appContainerRef}
+              onTabChange={handleTabChange}
+              onDone={() => { setShowWalkthrough(false); handleTabChange(0) }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    </AckProvider>
+  )
 }

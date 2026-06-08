@@ -1,26 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Inter:wght@400;500&display=swap');
 @import "tailwindcss";
 
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand */
+  --primary: #C8603A;
+  --primary-hover: #B8532F;
+  --primary-light: #E8845C;
+  --primary-pale: #F7EBE4;
+
+  /* Accents */
+  --sage: #7A9E7E;
+  --gold: #C4923A;
+  --gold-pale: #FBF3E3;
+
+  /* Backgrounds */
+  --bg-base: #FAF6F0;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F3EDE5;
+
+  /* Text */
+  --text-primary: #2A1B10;
+  --text-secondary: #6B4E3D;
+  --text-tertiary: #A38070;
+
+  /* Borders */
+  --border-soft: rgba(42, 27, 16, 0.07);
+  --border-glass: rgba(255, 255, 255, 0.38);
+
+  /* Motion */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.30, 1);
+}
+[data-theme="dark"] {
+  /* Brand stays same, just adjust pale */
+  --primary-pale: #3D1F14;
+
+  /* Backgrounds */
+  --bg-base: #1A1208;
+  --bg-surface: #241810;
+  --bg-elevated: #2E1F14;
+
+  /* Text */
+  --text-primary: #F5EFE6;
+  --text-secondary: #C4A08A;
+  --text-tertiary: #7A6055;
+
+  /* Borders */
+  --border-soft: rgba(255, 200, 160, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.08);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Also fix the hardcoded large-title bg */
+[data-theme="dark"] .large-title {
+  background: rgba(26, 18, 8, 0.85);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* And tab bar */
+[data-theme="dark"] .tab-bar {
+  background: rgba(36, 24, 16, 0.85);
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-base);
+  font-family: 'Inter', sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar hide */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Screen content area */
+.screen-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 90px;
+  scroll-behavior: smooth;
+}
+.screen-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tab screens slider */
+.tab-slider {
+  display: flex;
+  width: 500%;
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.30, 1);
+  height: 100%;
+}
+.tab-slide {
+  width: 20%;
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 90px;
+}
+.tab-slide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Large collapsing title */
+.large-title {
+  padding: 16px 20px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(250, 246, 240, 0.85);
+}
+
+/* Glass tab bar */
+.tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: rgba(243, 237, 229, 0.85);
+  backdrop-filter: blur(40px) saturate(2.2);
+  -webkit-backdrop-filter: blur(40px) saturate(2.2);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.5);
+}
+
+/* FAB button */
+.fab {
+  position: absolute;
+  bottom: 50px;
+  right: 20px;
+  z-index: 20;
+}
+
+/* Spring animations */
+@keyframes spring-in {
+  0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+  60% { transform: scale(1.04) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 25%,
+    var(--bg-surface) 50%,
+    var(--bg-elevated) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.animate-spring-in {
+  animation: spring-in 350ms var(--spring) both;
+}
+
+/* Active press states */
+.press-scale {
+  transition: transform 180ms var(--spring);
+}
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+/* Outfit font utility */
+.font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

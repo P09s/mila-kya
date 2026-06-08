@@ -1,0 +1,121 @@
+'use client'
+
+import { Star, MapPin, Share2 } from 'lucide-react'
+import { getHomeIcon } from '@/lib/homeIcons'
+import { CATEGORY_ICONS } from '@/lib/types'
+import type { ItemWithLocation } from '@/lib/types'
+
+// Maps stored iconKey → Lucide component (item icons from QuickAddSheet)
+const ITEM_ICON_MAP: Record<string, string> = {
+  package: 'Other',   shirt:   'Clothing', file:    'Documents',
+  pill:    'Medicine', gem:     'Jewellery', phone:  'Electronics',
+  key:     'Other',   book:    'Books',     bag:     'Other',
+  kitchen: 'Kitchen', chef:    'Kitchen',   toy:     'Toys',
+}
+
+function ItemIcon({ iconKey }: { iconKey: string | null }) {
+  // iconKey is either a QUICK_ICONS key ("shirt", "pill") or a category name ("Clothing")
+  const categoryName = iconKey ? (ITEM_ICON_MAP[iconKey] ?? iconKey) : 'Other'
+  const Icon = CATEGORY_ICONS[categoryName] ?? CATEGORY_ICONS['Other']
+  return (
+    <Icon size={20} strokeWidth={1.7} color="var(--primary)" />
+  )
+}
+
+interface ItemCardProps {
+  item: ItemWithLocation
+  onToggleImportant?: (id: string) => void
+}
+
+export function LocationBadge({ item }: { item: ItemWithLocation }) {
+  const home = item.homes
+  const room = item.rooms
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      background: 'var(--primary-pale)', color: 'var(--primary)',
+      borderRadius: 100, padding: '3px 9px 3px 7px',
+      fontSize: 10, fontWeight: 500, letterSpacing: '0.01em', marginTop: 4,
+    }}>
+      <MapPin size={9} strokeWidth={2.5} />
+      {home && (() => {
+        const HIcon = getHomeIcon(home.icon ?? 'home')
+        return <HIcon size={9} strokeWidth={2.5} color="var(--primary)" />
+      })()}
+      {home ? home.name : ''}
+      {room ? ` › ${room.name}` : ''}
+      {!home && 'Location unknown'}
+    </span>
+  )
+}
+
+export function ItemCard({ item, onToggleImportant }: ItemCardProps) {
+
+  function handleWhatsApp(e: React.MouseEvent) {
+    e.stopPropagation()
+    const home = item.homes
+    const room = item.rooms
+    const path = home && room
+      ? `${home.name} → ${room.name}`
+      : home ? home.name : 'Unknown location'
+
+    const msg = `📍 *${item.name}* rakha hai:\n${path}\n\nMilaKya se bheja`
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  return (
+    <div
+      className="press-scale"
+      style={{
+        background: 'var(--bg-surface)', borderRadius: 16,
+        border: '1px solid var(--border-soft)',
+        boxShadow: '0 1px 4px rgba(42,27,16,0.07), 0 4px 12px rgba(42,27,16,0.04)',
+        padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+      }}
+    >
+      {/* Icon thumbnail */}
+      <div style={{
+        width: 44, height: 44, borderRadius: 12,
+        background: 'var(--primary-pale)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <ItemIcon iconKey={item.emoji} />
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600,
+          color: 'var(--text-primary)', letterSpacing: '-0.01em',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {item.name}
+        </div>
+        <LocationBadge item={item} />
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        <button
+          onClick={handleWhatsApp}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
+          aria-label="Share on WhatsApp"
+        >
+          <Share2 size={15} strokeWidth={1.8} color="rgba(42,27,16,0.25)" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleImportant?.(item.id) }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
+          aria-label={item.is_important ? 'Remove important' : 'Mark important'}
+        >
+          <Star
+            size={16} strokeWidth={1.8}
+            color={item.is_important ? 'var(--gold)' : 'rgba(42,27,16,0.2)'}
+            fill={item.is_important ? 'var(--gold)' : 'none'}
+          />
+        </button>
+      </div>
+    </div>
+  )
+}

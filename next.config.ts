@@ -1,7 +1,21 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  // Enable React strict mode for better DX
+  reactStrictMode: true,
+  allowedDevOrigins: ['lauric-davian-slyly.ngrok-free.dev'],
 
-export default nextConfig;
+  // Headers for PWA
+  async headers() {
+    return [
+      {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json' },
+        ],
+      },
+    ]
+  },
+}
+
+export default nextConfig
