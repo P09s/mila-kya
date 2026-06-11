@@ -4,6 +4,7 @@ import { Star, MapPin, Share2 } from 'lucide-react'
 import { getHomeIcon } from '@/lib/homeIcons'
 import { CATEGORY_ICONS } from '@/lib/types'
 import type { ItemWithLocation } from '@/lib/types'
+import { useEffect, useState } from 'react'
 
 // Maps stored iconKey → Lucide component (item icons from QuickAddSheet)
 const ITEM_ICON_MAP: Record<string, string> = {
@@ -51,6 +52,19 @@ export function LocationBadge({ item }: { item: ItemWithLocation }) {
 }
 
 export function ItemCard({ item, onToggleImportant }: ItemCardProps) {
+  const [isImportant, setIsImportant] = useState(item.is_important)
+
+  // Sync when parent item changes (e.g. after re-fetch)
+  useEffect(() => {
+    setIsImportant(item.is_important)
+  }, [item.is_important])
+
+  function handleStarClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!onToggleImportant) return
+    setIsImportant((prev) => !prev)   // optimistic update immediately
+    onToggleImportant(item.id)
+  }
 
   function handleWhatsApp(e: React.MouseEvent) {
     e.stopPropagation()
@@ -102,17 +116,17 @@ export function ItemCard({ item, onToggleImportant }: ItemCardProps) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
           aria-label="Share on WhatsApp"
         >
-          <Share2 size={15} strokeWidth={1.8} color="rgba(42,27,16,0.25)" />
+          <Share2 size={15} strokeWidth={1.8} color="var(--text-tertiary)" />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleImportant?.(item.id) }}
+          onClick={handleStarClick}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
-          aria-label={item.is_important ? 'Remove important' : 'Mark important'}
+          aria-label={isImportant ? 'Remove important' : 'Mark important'}
         >
           <Star
             size={16} strokeWidth={1.8}
-            color={item.is_important ? 'var(--gold)' : 'rgba(42,27,16,0.2)'}
-            fill={item.is_important ? 'var(--gold)' : 'none'}
+            color={isImportant ? 'var(--gold)' : 'var(--text-tertiary)'}
+            fill={isImportant ? 'var(--gold)' : 'none'}
           />
         </button>
       </div>

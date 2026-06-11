@@ -43,7 +43,16 @@ export async function setActiveHome(homeId: string): Promise<void> {
     await (supabase.from('homes') as any).update({ is_active: true }).eq('id', homeId)
   }
 
-export async function deleteHome(homeId: string): Promise<void> {
-  const supabase = createClient()
-  await supabase.from('homes').delete().eq('id', homeId)
-}
+  export async function deleteHome(homeId: string): Promise<void> {
+    const supabase = createClient()
+    
+    // Delete all items in this home first
+    await supabase.from('items').delete().eq('home_id', homeId)
+    
+    // Delete all rooms (cascade should handle this if FK is set, but be explicit)
+    await supabase.from('rooms').delete().eq('home_id', homeId)
+    
+    // Now delete the home
+    const { error } = await supabase.from('homes').delete().eq('id', homeId)
+    if (error) throw error
+  }

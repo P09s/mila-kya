@@ -16,9 +16,10 @@ const PREVIEW_COUNT = 4
 
 interface HomeScreenProps {
   onViewAll?: () => void
+  onMutated?: () => void
 }
 
-export function HomeScreen({ onViewAll }: HomeScreenProps) {
+export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
   const [homes, setHomes] = useState<Home[]>([])
   const [items, setItems] = useState<ItemWithLocation[]>([])
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({})
@@ -73,6 +74,7 @@ export function HomeScreen({ onViewAll }: HomeScreenProps) {
     try {
       await toggleImportantDB(id, next)
       trigger(next ? 'important' : 'unimportant')
+      onMutated?.()
     } catch {
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, is_important: !next } : i)))
     }
@@ -217,7 +219,7 @@ export function HomeScreen({ onViewAll }: HomeScreenProps) {
         item={selectedItem}
         isOpen={itemDetailOpen}
         onClose={() => setItemDetailOpen(false)}
-        onUpdated={() => { loadItems(); setItemDetailOpen(false); trigger('saved') }}
+        onUpdated={() => { loadItems(); setItemDetailOpen(false); onMutated?.() }}  // ← add onMutated?.()
       />
 
       <AddHomeSheet

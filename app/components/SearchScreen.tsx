@@ -25,7 +25,7 @@ const chipColors = {
   sage:    { bg: '#EDF3ED',             text: '#4A7C59'        },
 }
 
-export function SearchScreen({ onMutated }: { onMutated?: () => void }) {
+export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => void; refreshKey?: number }) {
   const [query, setQuery]                     = useState('')
   const [allItems, setAllItems]               = useState<ItemWithLocation[]>([])
   const [items, setItems]                     = useState<ItemWithLocation[]>([])
@@ -42,11 +42,27 @@ export function SearchScreen({ onMutated }: { onMutated?: () => void }) {
 
   const { trigger } = useAck()
 
+  async function handleToggleImportant(id: string) {
+    const item = items.find((i) => i.id === id)
+    if (!item) return
+    const next = !item.is_important
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_important: next } : i))
+    setAllItems((prev) => prev.map((i) => i.id === id ? { ...i, is_important: next } : i))
+    try {
+      await toggleImportantDB(id, next)
+      trigger(next ? 'important' : 'unimportant')
+      onMutated?.()
+    } catch {
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_important: !next } : i))
+      setAllItems((prev) => prev.map((i) => i.id === id ? { ...i, is_important: !next } : i))
+    }
+  }
+
   useEffect(() => {
     setLoading(true)
     getAllItems().then((data) => { setAllItems(data); setItems(data); setInitialLoaded(true) })
       .catch(console.error).finally(() => setLoading(false))
-  }, [])
+  }, [refreshKey])
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) { setItems(allItems); return }
@@ -239,7 +255,7 @@ export function SearchScreen({ onMutated }: { onMutated?: () => void }) {
                   </div>
                 </div>
               )}
-              <ItemCard item={item} onToggleImportant={selectMode ? undefined : undefined} />
+              <ItemCard item={item} onToggleImportant={selectMode ? undefined : handleToggleImportant} />
             </div>
           )
         })}
@@ -271,7 +287,7 @@ export function SearchScreen({ onMutated }: { onMutated?: () => void }) {
       <ItemDetailSheet
         item={selectedItem} isOpen={itemDetailOpen}
         onClose={() => setItemDetailOpen(false)}
-        onUpdated={() => { doSearch(query); setItemDetailOpen(false); onMutated?.(); trigger('saved') }}
+        onUpdated={() => { doSearch(query); setItemDetailOpen(false); onMutated?.() }}
       />
 
       <style>{`

@@ -28,7 +28,7 @@ interface Stats {
 
 type Dialog = 'signout' | 'delete' | null
 
-export function ProfileScreen() {
+export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [toast, setToast] = useState('')
@@ -36,6 +36,7 @@ export function ProfileScreen() {
   const [actionLoading, setActionLoading] = useState(false)
   const { theme, toggle } = useTheme()
 
+  // Profile only needs to load once
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -49,6 +50,10 @@ export function ProfileScreen() {
         provider: identities[0]?.provider ?? 'email',
       })
     })
+  }, [])
+
+  // Stats re-fetch whenever anything changes in the app
+  useEffect(() => {
     Promise.all([getHomes(), getAllItems()]).then(([homes, items]) => {
       setStats({
         homes: homes.length,
@@ -56,7 +61,7 @@ export function ProfileScreen() {
         important: (items as ItemWithLocation[]).filter(i => i.is_important).length,
       })
     }).catch(console.error)
-  }, [])
+  }, [refreshKey])
 
   function showToast(msg: string) {
     setToast(msg)

@@ -30,6 +30,7 @@ export interface DetectedItem {
     })
     const data = await res.json()
     if (res.status === 429) throw new Error('rate_limit')
+    if (res.status === 422) throw new Error('wrong_image_type')
     if (!res.ok) throw new Error('scan_failed')
     return data.items
   }
@@ -45,6 +46,7 @@ export interface DetectedItem {
     })
     const data = await res.json()
     if (res.status === 429) throw new Error('rate_limit')
+    if (res.status === 422) throw new Error('wrong_image_type')
     if (!res.ok) throw new Error('scan_failed')
     return data.items
   }

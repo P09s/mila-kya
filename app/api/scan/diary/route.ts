@@ -1,12 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+async function classifyImage(image: string, mimeType: string): Promise<'diary' | 'photo'> {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${image}` } },
+          { type: 'text', text: `Does this image show a handwritten diary, written list, inventory register, or printed text page? Answer ONLY with one word: "diary" or "photo".` }
+        ]
+      }],
+      max_tokens: 5,
+    })
+  })
+  const data = await response.json()
+  const answer = data.choices?.[0]?.message?.content?.trim().toLowerCase() ?? 'photo'
+  return answer.includes('diary') ? 'diary' : 'photo'
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { image, mimeType } = await req.json()
 
     if (!process.env.GROQ_API_KEY) {
-      console.error('GROQ_API_KEY is missing!')
       return NextResponse.json({ error: 'no_key' }, { status: 500 })
+    }
+
+    // Validate: must be a diary/text image
+    const type = await classifyImage(image, mimeType || 'image/jpeg')
+    if (type !== 'diary') {
+      return NextResponse.json({ error: 'wrong_image_type', expected: 'diary' }, { status: 422 })
     }
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -46,7 +75,6 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     if (!response.ok) {
-      console.error('Groq diary error:', data)
       const isRateLimit = response.status === 429
       return NextResponse.json({ error: isRateLimit ? 'rate_limit' : 'scan_failed' }, { status: response.status })
     }

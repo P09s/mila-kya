@@ -21,6 +21,8 @@ export default function AppShell() {
   const [activeTab, setActiveTab]         = useState(0)
   const [sheetOpen, setSheetOpen]         = useState(false)
   const [refreshKey, setRefreshKey]       = useState(0)
+  const [profileKey, setProfileKey] = useState(0)
+  const [searchKey, setSearchKey]     = useState(0)
   const [userInitial, setUserInitial]     = useState('')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showWalkthrough, setShowWalkthrough] = useState(false)
@@ -77,7 +79,11 @@ export default function AppShell() {
     }
   }
 
-  const handleItemAdded = useCallback(() => { setRefreshKey((k) => k + 1) }, [])
+  const handleItemAdded = useCallback(() => { 
+    setRefreshKey((k) => k + 1)
+    setProfileKey((k) => k + 1)
+    setSearchKey((k) => k + 1)
+  }, [])
 
   if (!authed) return null
 
@@ -97,11 +103,11 @@ export default function AppShell() {
           <div ref={sliderRef} className="tab-slider" style={{ flex: 1 }}>
             {[0,1,2,3,4].map((i) => (
               <div key={i} className="tab-slide scrollbar-hide">
-                {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} />
-                : i === 1 ? <SearchScreen onMutated={handleItemAdded} />
+                {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} onMutated={handleItemAdded} />
+                : i === 1 ? <SearchScreen onMutated={handleItemAdded} refreshKey={searchKey} />
                 : i === 2 ? <ScanScreen onAdded={handleItemAdded} />
                 : i === 3 ? <GharScreen isVisible={activeTab === 3} onActiveHomeChanged={handleItemAdded} refreshKey={refreshKey} />
-                : <ProfileScreen />}
+                : <ProfileScreen refreshKey={refreshKey}/>}
               </div>
             ))}
           </div>

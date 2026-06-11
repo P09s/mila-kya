@@ -103,7 +103,13 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       setSelectedPhotoIdxs(new Set(items.map((_, i) => i)))
       setPhotoSheetOpen(true)
     } catch (e: any) {
-      setScanError(e?.message === 'rate_limit' ? '⏳ Thoda ruko, 1 minute baad dobara try karo.' : 'Photo scan failed. Dobara try karo.')
+      if (e?.message === 'wrong_image_type') {
+        setScanError('📒 Yeh diary ya list lagti hai. Photo scan ke liye kisi cheez ki photo lo.')
+      } else if (e?.message === 'rate_limit') {
+        setScanError('⏳ Thoda ruko, 1 minute baad dobara try karo.')
+      } else {
+        setScanError('Photo scan failed. Dobara try karo.')
+      }
     } finally { setPhotoScanning(false); e.target.value = '' }
   }
 
@@ -118,7 +124,13 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       setSelectedDiaryIdxs(new Set(items.map((_, i) => i)))
       setDiarySheetOpen(true)
     } catch (e: any) {
-      setScanError(e?.message === 'rate_limit' ? '⏳ Thoda ruko, 1 minute baad dobara try karo.' : 'Diary scan failed. Dobara try karo.')
+      if (e?.message === 'wrong_image_type') {
+        setScanError('📷 Yeh photo lagti hai, diary nahi. Haath se likhi list ki photo lo.')
+      } else if (e?.message === 'rate_limit') {
+        setScanError('⏳ Thoda ruko, 1 minute baad dobara try karo.')
+      } else {
+        setScanError('Diary scan failed. Dobara try karo.')
+      }
     } finally { setDiaryScanning(false); e.target.value = '' }
   }
 

@@ -64,6 +64,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
     try {
       await deleteHome(homeId)
       trigger('deleted')
+      onActiveHomeChanged?.()
       await loadHomes()
     } catch (e) { console.error(e) }
     finally { setPendingDeleteId(null) }
@@ -185,7 +186,11 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
       <AddHomeSheet
         isOpen={addSheetOpen}
         onClose={() => setAddSheetOpen(false)}
-        onAdded={() => { setAddSheetOpen(false); loadHomes() }}
+        onAdded={() => { 
+          setAddSheetOpen(false)
+          loadHomes()
+          onActiveHomeChanged?.()  // ← add this — notifies page.tsx to increment profileKey
+        }}
       />
 
       <HomeDetailSheet

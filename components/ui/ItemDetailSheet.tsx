@@ -20,14 +20,16 @@ interface ItemDetailSheetProps {
 
 export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetailSheetProps) {
   const [moving, setMoving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [homes, setHomes] = useState<Home[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [selectedHomeId, setSelectedHomeId] = useState('')
   const [selectedRoomId, setSelectedRoomId] = useState('')
   const [saving, setSaving] = useState(false)
+  const { trigger } = useAck()
 
   useEffect(() => {
-    if (!isOpen) { setMoving(false); return }
+    if (!isOpen) { setMoving(false); setConfirmDelete(false); return }
     if (item) {
       setSelectedHomeId(item.home_id ?? '')
       setSelectedRoomId(item.room_id ?? '')
@@ -61,18 +63,24 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
     if (!item) return
     try {
       await toggleImportant(item.id, !item.is_important)
+      trigger(item.is_important ? 'unimportant' : 'important')
       onUpdated()
     } catch (e) { console.error(e) }
   }
 
   async function handleDelete() {
     if (!item) return
-    if (!confirm(`"${item.name}" delete karo?`)) return
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
     try {
       await deleteItem(item.id)
+      trigger('deleted')
       onUpdated()
       onClose()
     } catch (e) { console.error(e) }
+    finally { setConfirmDelete(false) }
   }
 
   function handleWhatsApp() {
@@ -113,7 +121,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
           </div>
           <button onClick={handleToggleStar} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
             <Star size={20} strokeWidth={1.8}
-              color={item.is_important ? 'var(--gold)' : 'rgba(42,27,16,0.2)'}
+              color={item.is_important ? 'var(--gold)' : 'var(--text-tertiary)'}
               fill={item.is_important ? 'var(--gold)' : 'none'}
             />
           </button>
@@ -221,16 +229,24 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
           >
             <Share2 size={14} strokeWidth={2} /> WhatsApp
           </button>
-          <button onClick={handleDelete}
-            style={{
-              padding: '11px 16px', borderRadius: 12,
-              background: '#FDF0F0', border: '1px solid rgba(217,79,79,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <Trash2 size={16} strokeWidth={1.8} color="#D94F4F" />
-          </button>
+          
+          {confirmDelete ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setConfirmDelete(false)}
+                style={{ padding: '11px 14px', borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Nahi
+              </button>
+              <button onClick={handleDelete}
+                style={{ padding: '11px 14px', borderRadius: 12, background: '#FEE2E2', border: '1px solid #FCA5A5', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#B91C1C' }}>
+                Haan
+              </button>
+            </div>
+          ) : (
+            <button onClick={handleDelete}
+              style={{ padding: '11px 16px', borderRadius: 12, background: '#FDF0F0', border: '1px solid rgba(217,79,79,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <Trash2 size={16} strokeWidth={1.8} color="#D94F4F" />
+            </button>
+          )}
         </div>
 
         <div style={{ height: 8 }} />
