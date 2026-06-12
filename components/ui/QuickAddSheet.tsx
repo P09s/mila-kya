@@ -13,23 +13,24 @@ import { getRoomsByHome } from '@/lib/rooms'
 import { CATEGORIES, CATEGORY_ICONS } from '@/lib/types'
 import { getHomeIcon } from '@/lib/homeIcons'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
 import type { Home, Room } from '@/lib/types'
 import type { DetectedItem } from '@/lib/gemini'
+import type { DictKey } from '@/lib/i18n'
 
-// Item icon picker — Lucide icons replacing emoji array
-const QUICK_ICONS = [
-  { key: 'package',    Icon: Package,         label: 'Box / Other'   },
-  { key: 'shirt',      Icon: Shirt,           label: 'Clothing'      },
-  { key: 'file',       Icon: FileText,        label: 'Documents'     },
-  { key: 'pill',       Icon: Pill,            label: 'Medicine'      },
-  { key: 'gem',        Icon: Gem,             label: 'Jewellery'     },
-  { key: 'phone',      Icon: Smartphone,      label: 'Electronics'   },
-  { key: 'key',        Icon: Key,             label: 'Keys'          },
-  { key: 'book',       Icon: BookOpen,        label: 'Books'         },
-  { key: 'bag',        Icon: ShoppingBag,     label: 'Bag'           },
-  { key: 'kitchen',    Icon: UtensilsCrossed, label: 'Kitchen'       },
-  { key: 'chef',       Icon: ChefHat,         label: 'Food / Tiffin' },
-  { key: 'toy',        Icon: Puzzle,          label: 'Toys'          },
+const QUICK_ICONS: { key: string; Icon: React.FC<any>; labelKey: DictKey }[] = [
+  { key: 'package',    Icon: Package,         labelKey: 'preset.item.box'      },
+  { key: 'shirt',      Icon: Shirt,           labelKey: 'preset.item.clothing' },
+  { key: 'file',       Icon: FileText,        labelKey: 'preset.item.docs'     },
+  { key: 'pill',       Icon: Pill,            labelKey: 'preset.item.meds'     },
+  { key: 'gem',        Icon: Gem,             labelKey: 'preset.item.jewel'    },
+  { key: 'phone',      Icon: Smartphone,      labelKey: 'preset.item.elec'     },
+  { key: 'key',        Icon: Key,             labelKey: 'preset.item.keys'     },
+  { key: 'book',       Icon: BookOpen,        labelKey: 'preset.item.books'    },
+  { key: 'bag',        Icon: ShoppingBag,     labelKey: 'preset.item.bag'      },
+  { key: 'kitchen',    Icon: UtensilsCrossed, labelKey: 'preset.room.kitchen'  },
+  { key: 'chef',       Icon: ChefHat,         labelKey: 'preset.item.food'     },
+  { key: 'toy',        Icon: Puzzle,          labelKey: 'preset.item.toys'     },
 ]
 
 interface QuickAddSheetProps {
@@ -55,9 +56,10 @@ export function QuickAddSheet({
   const [rooms, setRooms]             = useState<Room[]>([])
   const [loading, setLoading]         = useState(false)
   const [listening, setListening]     = useState(false)
+  
   const { trigger } = useAck()
+  const { t } = useLanguage()
 
-  // Load homes on open
   useEffect(() => {
     if (!isOpen) return
     getHomes().then((h) => {
@@ -69,15 +71,12 @@ export function QuickAddSheet({
     }).catch(() => {})
   }, [isOpen, homeId])
 
-  // Load rooms when home changes
   useEffect(() => {
     if (!isOpen || !homeId) return
     getRoomsByHome(homeId).then(setRooms).catch(() => setRooms([]))
     setRoomId('')
   }, [homeId, isOpen])
   
-
-  // Sync iconKey with category selection
   useEffect(() => {
     const map: Record<string, string> = {
       Clothing: 'shirt', Documents: 'file', Electronics: 'phone',
@@ -87,7 +86,6 @@ export function QuickAddSheet({
     setIconKey(map[category] ?? 'package')
   }, [category])
 
-  // Reset on close
   useEffect(() => {
     if (!isOpen) {
       setName(''); setIconKey('package'); setCategory('Other')
@@ -95,7 +93,6 @@ export function QuickAddSheet({
     }
   }, [isOpen])
 
-  // Pre-fill from AI scan
   useEffect(() => {
     if (isOpen && defaultDetectedItem) {
       setName(defaultDetectedItem.name)
@@ -103,7 +100,6 @@ export function QuickAddSheet({
     }
   }, [isOpen, defaultDetectedItem])
 
-  // Voice input
   function startVoice() {
     if (typeof window === 'undefined') return
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -123,7 +119,7 @@ export function QuickAddSheet({
     try {
       await createItem({
         name: name.trim(),
-        emoji: iconKey,          // store iconKey, render with QUICK_ICONS lookup
+        emoji: iconKey,          
         category,
         is_important: isImportant,
         home_id:  homeId  || undefined,
@@ -142,17 +138,17 @@ export function QuickAddSheet({
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="Cheez add karo" height="80">
+    <BottomSheet isOpen={isOpen} onClose={onClose} title={t('quickAdd.title')} height="80">
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Name + voice */}
         <div>
-          <label style={labelStyle}>Kya rakha hai? *</label>
+          <label style={labelStyle}>{t('quickAdd.what')}</label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="text" value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Passport, Blue bag, Diwali suit..."
+              placeholder={t('quickAdd.whatPh')}
               autoFocus style={inputStyle}
             />
             <button
@@ -164,7 +160,7 @@ export function QuickAddSheet({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}
-              title="Bol ke add karo"
+              title={t('quickAdd.voiceTitle')}
             >
               {listening
                 ? <MicOff size={18} color="var(--primary)" strokeWidth={2} />
@@ -176,13 +172,13 @@ export function QuickAddSheet({
 
         {/* Icon picker — Lucide grid */}
         <div>
-          <label style={labelStyle}>Icon</label>
+          <label style={labelStyle}>{t('quickAdd.icon')}</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {QUICK_ICONS.map(({ key, Icon, label }) => {
+            {QUICK_ICONS.map(({ key, Icon, labelKey }) => {
               const selected = iconKey === key
               return (
                 <button
-                  key={key} onClick={() => setIconKey(key)} title={label}
+                  key={key} onClick={() => setIconKey(key)} title={t(labelKey)}
                   style={{
                     width: 40, height: 40, borderRadius: 10,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -202,9 +198,9 @@ export function QuickAddSheet({
           </div>
         </div>
 
-        {/* Category chips — Lucide icons */}
+        {/* Category chips */}
         <div>
-          <label style={labelStyle}>Category</label>
+          <label style={labelStyle}>{t('quickAdd.category')}</label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {CATEGORIES.map((cat) => {
               const CatIcon = CATEGORY_ICONS[cat]
@@ -230,10 +226,10 @@ export function QuickAddSheet({
           </div>
         </div>
 
-        {/* Home picker — uses getHomeIcon() */}
+        {/* Home picker */}
         {homes.length > 0 && (
           <div>
-            <label style={labelStyle}>Kahan rakha hai?</label>
+            <label style={labelStyle}>{t('quickAdd.where')}</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {homes.map((h) => {
                 const selected = homeId === h.id
@@ -269,13 +265,13 @@ export function QuickAddSheet({
         {/* Room picker */}
         {rooms.length > 0 && (
           <div>
-            <label style={labelStyle}>Room / jagah</label>
+            <label style={labelStyle}>{t('quickAdd.room')}</label>
             <select
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
               style={{ ...inputStyle, appearance: 'none' } as React.CSSProperties}
             >
-              <option value="">-- Select room --</option>
+              <option value="">{t('quickAdd.roomPh')}</option>
               {rooms.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
@@ -285,22 +281,22 @@ export function QuickAddSheet({
 
         {/* Sub-location */}
         <div>
-          <label style={labelStyle}>Sub-location (optional)</label>
+          <label style={labelStyle}>{t('quickAdd.subLoc')}</label>
           <input
             type="text" value={subLocation}
             onChange={(e) => setSubLocation(e.target.value)}
-            placeholder="Top shelf, left drawer, inside bag..."
+            placeholder={t('quickAdd.subLocPh')}
             style={inputStyle}
           />
         </div>
 
         {/* Notes */}
         <div>
-          <label style={labelStyle}>Notes (optional)</label>
+          <label style={labelStyle}>{t('quickAdd.notes')}</label>
           <input
             type="text" value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Koi bhi note..."
+            placeholder={t('quickAdd.notesPh')}
             style={inputStyle}
           />
         </div>
@@ -323,10 +319,10 @@ export function QuickAddSheet({
           </span>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: isImportant ? 'var(--gold)' : 'var(--text-secondary)' }}>
-              Important mark karo
+              {t('quickAdd.imp')}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Passport, jewellery, medicine etc.
+              {t('quickAdd.impSub')}
             </div>
           </div>
         </button>
@@ -348,8 +344,8 @@ export function QuickAddSheet({
           }}
         >
           {loading
-            ? 'Saving...'
-            : <><Check size={16} strokeWidth={2.5} /> Save karo</>
+            ? t('quickAdd.saving')
+            : <><Check size={16} strokeWidth={2.5} /> {t('quickAdd.save')}</>
           }
         </button>
 

@@ -5,26 +5,27 @@ import { Home, Building2, Users, Heart, Briefcase, Package, Warehouse, Trees, Pl
 import { BottomSheet } from './BottomSheet'
 import { createHome } from '@/lib/homes'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
+import type { DictKey } from '@/lib/i18n'
 
-// ─── Icon system — store key in DB instead of emoji ──────────────────
-const HOME_ICONS = [
-  { key: 'home',      Icon: Home,      label: 'Ghar'       },
-  { key: 'building',  Icon: Building2, label: 'PG/Hostel'  },
-  { key: 'users',     Icon: Users,     label: 'Maika'      },
-  { key: 'heart',     Icon: Heart,     label: 'Sasural'    },
-  { key: 'briefcase', Icon: Briefcase, label: 'Office'     },
-  { key: 'package',   Icon: Package,   label: 'Storage'    },
-  { key: 'warehouse', Icon: Warehouse, label: 'Warehouse'  },
-  { key: 'trees',     Icon: Trees,     label: 'Farmhouse'  },
+const HOME_ICONS: { key: string; Icon: React.FC<any>; labelKey: DictKey }[] = [
+  { key: 'home',      Icon: Home,      labelKey: 'preset.home.ghar'      },
+  { key: 'building',  Icon: Building2, labelKey: 'preset.home.pg'        },
+  { key: 'users',     Icon: Users,     labelKey: 'preset.home.maika'     },
+  { key: 'heart',     Icon: Heart,     labelKey: 'preset.home.sasural'   },
+  { key: 'briefcase', Icon: Briefcase, labelKey: 'preset.home.office'    },
+  { key: 'package',   Icon: Package,   labelKey: 'preset.home.storage'   },
+  { key: 'warehouse', Icon: Warehouse, labelKey: 'preset.home.warehouse' },
+  { key: 'trees',     Icon: Trees,     labelKey: 'preset.home.farmhouse' },
 ]
 
-const HOME_PRESETS = [
-  { iconKey: 'home',      name: 'Ghar'       },
-  { iconKey: 'building',  name: 'PG / Hostel'},
-  { iconKey: 'users',     name: 'Maika'      },
-  { iconKey: 'heart',     name: 'Sasural'    },
-  { iconKey: 'briefcase', name: 'Office'     },
-  { iconKey: 'package',   name: 'Storage'    },
+const HOME_PRESETS: { iconKey: string; nameKey: DictKey }[] = [
+  { iconKey: 'home',      nameKey: 'preset.home.ghar'    },
+  { iconKey: 'building',  nameKey: 'preset.home.pg'      },
+  { iconKey: 'users',     nameKey: 'preset.home.maika'   },
+  { iconKey: 'heart',     nameKey: 'preset.home.sasural' },
+  { iconKey: 'briefcase', nameKey: 'preset.home.office'  },
+  { iconKey: 'package',   nameKey: 'preset.home.storage' },
 ]
 
 interface AddHomeSheetProps {
@@ -39,17 +40,17 @@ export function AddHomeSheet({ isOpen, onClose, onAdded }: AddHomeSheetProps) {
   const [city, setCity] = useState('')
   const [loading, setLoading] = useState(false)
   const { trigger } = useAck()
+  const { t } = useLanguage()
 
-  function applyPreset(preset: { iconKey: string; name: string }) {
+  function applyPreset(preset: { iconKey: string; nameKey: DictKey }) {
     setIconKey(preset.iconKey)
-    setName(preset.name)
+    setName(t(preset.nameKey))
   }
 
   async function handleSave() {
     if (!name.trim()) return
     setLoading(true)
     try {
-      // Store iconKey as the icon field — render with getHomeIcon() everywhere
       await createHome({ name: name.trim(), icon: iconKey, city: city.trim() || null, address: null })
       setName(''); setIconKey('home'); setCity('')
       trigger('home_added')
@@ -63,20 +64,21 @@ export function AddHomeSheet({ isOpen, onClose, onAdded }: AddHomeSheetProps) {
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="Naya ghar jodon">
+    <BottomSheet isOpen={isOpen} onClose={onClose} title={t('addHome.title')}>
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Presets */}
         <div>
-          <label style={labelStyle}>Quick select</label>
+          <label style={labelStyle}>{t('addHome.quickSel')}</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {HOME_PRESETS.map((p) => {
               const match = HOME_ICONS.find((i) => i.key === p.iconKey)!
               const Icon = match.Icon
-              const isSelected = name === p.name && iconKey === p.iconKey
+              const translatedName = t(p.nameKey)
+              const isSelected = name === translatedName && iconKey === p.iconKey
               return (
                 <button
-                  key={p.name}
+                  key={p.nameKey}
                   onClick={() => applyPreset(p)}
                   style={{
                     padding: '7px 14px', borderRadius: 12,
@@ -89,7 +91,7 @@ export function AddHomeSheet({ isOpen, onClose, onAdded }: AddHomeSheetProps) {
                   }}
                 >
                   <Icon size={14} strokeWidth={isSelected ? 2.2 : 1.8} />
-                  {p.name}
+                  {translatedName}
                 </button>
               )
             })}
@@ -98,26 +100,26 @@ export function AddHomeSheet({ isOpen, onClose, onAdded }: AddHomeSheetProps) {
 
         {/* Name */}
         <div>
-          <label style={labelStyle}>Ghar ka naam *</label>
+          <label style={labelStyle}>{t('addHome.name')}</label>
           <input
             type="text" value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ghar, PG, Sasural..."
+            placeholder={t('addHome.namePh')}
             style={inputStyle}
           />
         </div>
 
         {/* Icon picker */}
         <div>
-          <label style={labelStyle}>Icon</label>
+          <label style={labelStyle}>{t('addHome.icon')}</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {HOME_ICONS.map(({ key, Icon, label }) => {
+            {HOME_ICONS.map(({ key, Icon, labelKey }) => {
               const isSelected = iconKey === key
               return (
                 <button
                   key={key}
                   onClick={() => setIconKey(key)}
-                  title={label}
+                  title={t(labelKey)}
                   style={{
                     width: 44, height: 44, borderRadius: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -139,11 +141,11 @@ export function AddHomeSheet({ isOpen, onClose, onAdded }: AddHomeSheetProps) {
 
         {/* City */}
         <div>
-          <label style={labelStyle}>City (optional)</label>
+          <label style={labelStyle}>{t('addHome.city')}</label>
           <input
             type="text" value={city}
             onChange={(e) => setCity(e.target.value)}
-            placeholder="Delhi, Lucknow, Jaipur..."
+            placeholder={t('addHome.cityPh')}
             style={inputStyle}
           />
         </div>
@@ -162,7 +164,7 @@ export function AddHomeSheet({ isOpen, onClose, onAdded }: AddHomeSheetProps) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}
         >
-          {loading ? 'Adding...' : <><Plus size={16} strokeWidth={2.5} /> Ghar Add karo</>}
+          {loading ? t('addHome.adding') : <><Plus size={16} strokeWidth={2.5} /> {t('addHome.btn')}</>}
         </button>
         <div style={{ height: 8 }} />
       </div>

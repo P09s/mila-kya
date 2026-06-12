@@ -1,26 +1,31 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { Check, Trash2, Star, StarOff, Plus, Share2, Home, DoorOpen, Camera, BookOpen } from 'lucide-react'
+import { Check, Trash2, Star, StarOff, Plus, Share2, Home, DoorOpen, Camera, BookOpen, PartyPopper } from 'lucide-react'
+import { useLanguage } from '@/lib/useLanguage'
 
 export type ActionType =
   | 'deleted' | 'added' | 'important' | 'unimportant' | 'saved'
   | 'shared' | 'home_added' | 'room_added' | 'scan_added' | 'diary_added'
   | null
 
-const CONFIG: Record<NonNullable<ActionType>, {
-  Icon: React.FC<any>; color: string; bg: string; label: (n: number) => string
+// Icon + color/bg config — labels come from i18n so only visual props live here
+const VISUAL: Record<NonNullable<ActionType>, {
+  Icon: React.FC<any>
+  SecondaryIcon?: React.FC<any>
+  color: string
+  bg: string
 }> = {
-  deleted:     { Icon: Trash2,    color: '#C0392B',           bg: 'rgba(192,57,43,0.1)',       label: (n) => n > 1 ? `${n} cheezein delete ho gayi` : 'Delete ho gayi' },
-  added:       { Icon: Plus,      color: 'var(--primary)',     bg: 'var(--primary-pale)',        label: (n) => n > 1 ? `${n} cheezein add ho gayi 🎉` : 'Cheez add ho gayi 🎉' },
-  important:   { Icon: Star,      color: '#C4923A',            bg: 'var(--gold-pale)',           label: () => 'Important mark ho gayi ⭐' },
-  unimportant: { Icon: StarOff,   color: 'var(--text-tertiary)',bg: 'var(--bg-elevated)',        label: () => 'Important se hata diya' },
-  saved:       { Icon: Check,     color: '#4CAF7D',            bg: 'rgba(76,175,125,0.1)',       label: () => 'Save ho gaya ✓' },
-  shared:      { Icon: Share2,    color: '#4A7C59',            bg: '#EDF3ED',                   label: () => 'Share ho gaya!' },
-  home_added:  { Icon: Home,      color: 'var(--primary)',     bg: 'var(--primary-pale)',        label: () => 'Naya ghar add ho gaya 🏠' },
-  room_added:  { Icon: DoorOpen,  color: 'var(--primary)',     bg: 'var(--primary-pale)',        label: () => 'Room add ho gaya ✓' },
-  scan_added:  { Icon: Camera,    color: 'var(--primary)',     bg: 'var(--primary-pale)',        label: (n) => n > 1 ? `${n} cheezein scan se add ho gayi 🎉` : 'Cheez scan se add ho gayi 🎉' },
-  diary_added: { Icon: BookOpen,  color: '#C4923A',            bg: 'var(--gold-pale)',           label: (n) => n > 1 ? `${n} cheezein diary se add ho gayi 📒` : 'Cheez diary se add ho gayi 📒' },
+  deleted:     { Icon: Trash2,    color: '#C0392B',               bg: 'rgba(192,57,43,0.1)'     },
+  added:       { Icon: Plus,      SecondaryIcon: PartyPopper, color: 'var(--primary)',     bg: 'var(--primary-pale)'      },
+  important:   { Icon: Star,      color: '#C4923A',               bg: 'var(--gold-pale)'        },
+  unimportant: { Icon: StarOff,   color: 'var(--text-tertiary)',   bg: 'var(--bg-elevated)'      },
+  saved:       { Icon: Check,     color: '#4CAF7D',               bg: 'rgba(76,175,125,0.1)'    },
+  shared:      { Icon: Share2,    color: '#4A7C59',               bg: '#EDF3ED'                 },
+  home_added:  { Icon: Home,      SecondaryIcon: PartyPopper, color: 'var(--primary)',     bg: 'var(--primary-pale)'      },
+  room_added:  { Icon: DoorOpen,  SecondaryIcon: Check,       color: 'var(--primary)',     bg: 'var(--primary-pale)'      },
+  scan_added:  { Icon: Camera,    SecondaryIcon: PartyPopper, color: 'var(--primary)',     bg: 'var(--primary-pale)'      },
+  diary_added: { Icon: BookOpen,  SecondaryIcon: PartyPopper, color: '#C4923A',            bg: 'var(--gold-pale)'         },
 }
 
 // ── Context ───────────────────────────────────────────────────────────
@@ -63,6 +68,7 @@ function ActionConfirmation({ action, count = 1, onDone }: {
   const [phase, setPhase] = useState<'hidden' | 'in' | 'out'>('hidden')
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = [] }
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (!action) { setPhase('hidden'); return }
@@ -74,11 +80,26 @@ function ActionConfirmation({ action, count = 1, onDone }: {
   }, [action])
 
   if (phase === 'hidden' || !action) return null
-  const { Icon, color, bg, label } = CONFIG[action]
+  const { Icon, SecondaryIcon, color, bg } = VISUAL[action]
+
+  // Resolve label from i18n
+  function getLabel(): string {
+    switch (action) {
+      case 'deleted':     return count > 1 ? t('ack.deleted.many', count) : t('ack.deleted.one')
+      case 'added':       return count > 1 ? t('ack.added.many', count)   : t('ack.added.one')
+      case 'scan_added':  return count > 1 ? t('ack.scan_added.many', count) : t('ack.scan_added.one')
+      case 'diary_added': return count > 1 ? t('ack.diary_added.many', count) : t('ack.diary_added.one')
+      case 'important':   return t('ack.important')
+      case 'unimportant': return t('ack.unimportant')
+      case 'saved':       return t('ack.saved')
+      case 'shared':      return t('ack.shared')
+      case 'home_added':  return t('ack.home_added')
+      case 'room_added':  return t('ack.room_added')
+      default:            return ''
+    }
+  }
 
   return (
-    // position:fixed here is CORRECT — this is mounted at root level (AckProvider in page.tsx)
-    // so it always renders over the whole 430px shell regardless of which tab is active
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -107,18 +128,34 @@ function ActionConfirmation({ action, count = 1, onDone }: {
         transition: 'opacity 350ms ease, transform 350ms ease',
         animation: phase === 'in' ? 'ack-pop 400ms cubic-bezier(0.34,1.56,0.64,1) both' : undefined,
       }}>
-        <div style={{
-          width: 76, height: 76, borderRadius: 24, background: bg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: phase === 'in' ? 'ack-icon 450ms cubic-bezier(0.34,1.56,0.64,1) 60ms both' : undefined,
-        }}>
-          <Icon size={36} strokeWidth={1.8} color={color} />
+        {/* Icon bubble — main icon + optional secondary badge */}
+        <div style={{ position: 'relative', animation: phase === 'in' ? 'ack-icon 450ms cubic-bezier(0.34,1.56,0.64,1) 60ms both' : undefined }}>
+          <div style={{
+            width: 76, height: 76, borderRadius: 24, background: bg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon size={36} strokeWidth={1.8} color={color} />
+          </div>
+          {/* Secondary badge icon — bottom-right corner */}
+          {SecondaryIcon && (
+            <div style={{
+              position: 'absolute', bottom: -6, right: -6,
+              width: 26, height: 26, borderRadius: 8,
+              background: 'var(--bg-surface)',
+              border: '1.5px solid var(--border-soft)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            }}>
+              <SecondaryIcon size={14} strokeWidth={2} color={color} />
+            </div>
+          )}
         </div>
+
         <div style={{
           fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 700,
           color: 'var(--text-primary)', textAlign: 'center', lineHeight: 1.35,
         }}>
-          {label(count)}
+          {getLabel()}
         </div>
       </div>
 

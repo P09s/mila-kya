@@ -4,38 +4,46 @@ import { useState } from 'react'
 import {
   Home, Building, Users, Heart, Briefcase, Package, Warehouse, Trees,
   Plus, ChevronRight, Check, MapPin, Sofa, UtensilsCrossed, BedDouble,
-  Bath, BookOpen, Box, Rocket, PartyPopper, ArrowRight,
+  Bath, BookOpen, Box, Rocket, PartyPopper, ArrowRight, X, Globe,
 } from 'lucide-react'
 import { createHome, setActiveHome } from '@/lib/homes'
 import { createRoom } from '@/lib/rooms'
+import { useLanguage } from '@/lib/useLanguage'
+import type { Lang, DictKey } from '@/lib/i18n'
 
-const HOME_ICONS = [
-  { key: 'home',      Icon: Home,      label: 'Ghar'      },
-  { key: 'building',  Icon: Building,  label: 'PG/Hostel' },
-  { key: 'users',     Icon: Users,     label: 'Maika'     },
-  { key: 'heart',     Icon: Heart,     label: 'Sasural'   },
-  { key: 'briefcase', Icon: Briefcase, label: 'Office'    },
-  { key: 'package',   Icon: Package,   label: 'Storage'   },
-  { key: 'warehouse', Icon: Warehouse, label: 'Warehouse' },
-  { key: 'trees',     Icon: Trees,     label: 'Farmhouse' },
+const HOME_ICONS: { key: string; Icon: React.FC<any>; labelKey: DictKey }[] = [
+  { key: 'home',      Icon: Home,      labelKey: 'preset.home.ghar'      },
+  { key: 'building',  Icon: Building,  labelKey: 'preset.home.pg'        },
+  { key: 'users',     Icon: Users,     labelKey: 'preset.home.maika'     },
+  { key: 'heart',     Icon: Heart,     labelKey: 'preset.home.sasural'   },
+  { key: 'briefcase', Icon: Briefcase, labelKey: 'preset.home.office'    },
+  { key: 'package',   Icon: Package,   labelKey: 'preset.home.storage'   },
+  { key: 'warehouse', Icon: Warehouse, labelKey: 'preset.home.warehouse' },
+  { key: 'trees',     Icon: Trees,     labelKey: 'preset.home.farmhouse' },
 ]
 
-const HOME_PRESETS = [
-  { iconKey: 'home',      name: 'Ghar'        },
-  { iconKey: 'building',  name: 'PG / Hostel' },
-  { iconKey: 'users',     name: 'Maika'       },
-  { iconKey: 'heart',     name: 'Sasural'     },
-  { iconKey: 'briefcase', name: 'Office'      },
-  { iconKey: 'package',   name: 'Storage'     },
+const HOME_PRESETS: { iconKey: string; nameKey: DictKey }[] = [
+  { iconKey: 'home',      nameKey: 'preset.home.ghar'    },
+  { iconKey: 'building',  nameKey: 'preset.home.pg'      },
+  { iconKey: 'users',     nameKey: 'preset.home.maika'   },
+  { iconKey: 'heart',     nameKey: 'preset.home.sasural' },
+  { iconKey: 'briefcase', nameKey: 'preset.home.office'  },
+  { iconKey: 'package',   nameKey: 'preset.home.storage' },
 ]
 
-const ROOM_PRESETS = [
-  { icon: BedDouble,       name: 'Bedroom'     },
-  { icon: UtensilsCrossed, name: 'Kitchen'     },
-  { icon: Sofa,            name: 'Living Room' },
-  { icon: Bath,            name: 'Bathroom'    },
-  { icon: BookOpen,        name: 'Study Room'  },
-  { icon: Box,             name: 'Store Room'  },
+const ROOM_PRESETS: { icon: React.FC<any>; nameKey: DictKey }[] = [
+  { icon: BedDouble,       nameKey: 'preset.room.bedroom'  },
+  { icon: UtensilsCrossed, nameKey: 'preset.room.kitchen'  },
+  { icon: Sofa,            nameKey: 'preset.room.living'   },
+  { icon: Bath,            nameKey: 'preset.room.bathroom' },
+  { icon: BookOpen,        nameKey: 'preset.room.study'    },
+  { icon: Box,             nameKey: 'preset.room.store'    },
+]
+
+const LANG_OPTIONS: { lang: Lang; label: string; sub: string; flag: string }[] = [
+  { lang: 'hinglish', label: 'Hinglish',  sub: 'Roman Hindi + English', flag: '🇮🇳' },
+  { lang: 'en',       label: 'English',   sub: 'Full English',           flag: '🇬🇧' },
+  { lang: 'hi',       label: 'हिंदी',      sub: 'पूर्ण हिंदी में',        flag: '🇮🇳' },
 ]
 
 interface OnboardingWizardProps {
@@ -43,10 +51,13 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const { t, lang, setLang } = useLanguage()
+
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0)
   const [homeName, setHomeName] = useState('')
   const [homeIconKey, setHomeIconKey] = useState('home')
   const [homeCity, setHomeCity] = useState('')
+  // Using English key for state intentionally, will translate later or on demand
   const [selectedRooms, setSelectedRooms] = useState<string[]>(['Bedroom'])
   const [customRoom, setCustomRoom] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,9 +70,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   function addCustomRoom() {
-    const t = customRoom.trim()
-    if (!t || selectedRooms.includes(t)) return
-    setSelectedRooms(prev => [...prev, t])
+    const tr = customRoom.trim()
+    if (!tr || selectedRooms.includes(tr)) return
+    setSelectedRooms(prev => [...prev, tr])
     setCustomRoom('')
   }
 
@@ -86,7 +97,6 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const ActiveHomeIcon = HOME_ICONS.find(i => i.key === homeIconKey)?.Icon ?? Home
 
-  // Outer shell — matches AppShell's 430px container
   const shell: React.CSSProperties = {
     position: 'absolute', inset: 0,
     background: 'var(--bg-base)',
@@ -110,10 +120,10 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Outfit, sans-serif', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
           <PartyPopper size={22} strokeWidth={1.8} color="var(--primary)" />
-          Sab ready hai!
+          {t('onboard.done.msg')}
         </div>
         <div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>
-          {homeName} set up ho gaya
+          {t('onboard.done.sub', { name: homeName })}
         </div>
       </div>
     )
@@ -121,41 +131,96 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   return (
     <div style={shell}>
-      {/* Progress bar */}
-      <div style={{ padding: '52px 24px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
-          {[1, 2, 3].map(n => (
-            <div key={n} style={{
-              flex: 1, height: 3, borderRadius: 100,
-              background: n <= step ? 'var(--primary)' : 'var(--bg-elevated)',
-              transition: 'background 300ms',
-            }} />
-          ))}
+      {step > 0 && (
+        <div style={{ padding: '52px 24px 0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+            {[1, 2, 3].map(n => (
+              <div key={n} style={{
+                flex: 1, height: 3, borderRadius: 100,
+                background: n <= step ? 'var(--primary)' : 'var(--bg-elevated)',
+                transition: 'background 300ms',
+              }} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ flex: 1, padding: '0 24px 48px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, padding: step === 0 ? '0 24px 48px' : '0 24px 48px', display: 'flex', flexDirection: 'column', justifyContent: step === 0 ? 'center' : 'flex-start' }}>
+
+        {/* ── STEP 0 — Language picker ── */}
+        {step === 0 && (
+          <div style={{ animation: 'slideIn 350ms var(--ease-out) both', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 20,
+              background: 'var(--primary-pale)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 20,
+            }}>
+              <Globe size={32} strokeWidth={1.6} color="var(--primary)" />
+            </div>
+            <h1 style={{ ...heading, textAlign: 'center', marginBottom: 8 }}>
+              {t('onboard.lang.title')}
+            </h1>
+            <p style={{ ...sub, textAlign: 'center', marginBottom: 32 }}>
+              {t('onboard.lang.sub')}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+              {LANG_OPTIONS.map(({ lang: l, label, sub: s, flag }) => {
+                const isSel = lang === l
+                return (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '14px 16px', borderRadius: 16,
+                      border: isSel ? '2px solid var(--primary)' : '1.5px solid var(--border-soft)',
+                      background: isSel ? 'var(--primary-pale)' : 'var(--bg-surface)',
+                      cursor: 'pointer', transition: 'all 150ms', textAlign: 'left', width: '100%',
+                    }}
+                  >
+                    <span style={{ fontSize: 24, flexShrink: 0 }}>{flag}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: isSel ? 'var(--primary)' : 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>{label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1 }}>{s}</div>
+                    </div>
+                    {isSel && <Check size={18} strokeWidth={2.5} color="var(--primary)" />}
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => setStep(1)}
+              style={{ ...primaryBtn(false), marginTop: 28 }}
+            >
+              {t('common.next')} <ChevronRight size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
 
         {/* ── STEP 1 ── */}
         {step === 1 && (
           <div style={{ animation: 'slideIn 350ms var(--ease-out) both' }}>
             <div style={{ marginBottom: 28 }}>
-              <div style={stepLabel}>Step 1 of 3</div>
-              <h1 style={heading}>Pehla ghar banao</h1>
+              <div style={stepLabel}>{t('onboard.step1.label')}</div>
+              <h1 style={heading}>{t('onboard.step1.title')}</h1>
               <Home size={26} strokeWidth={1.6} color="var(--primary)" style={{ margin: '6px 0 8px' }} />
-              <p style={sub}>Kahan rehte ho? Ghar, PG, hostel — jo bhi ho.</p>
+              <p style={sub}>{t('onboard.step1.sub')}</p>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={labelSt}>Quick select karo</label>
+              <label style={labelSt}>{t('onboard.step1.quickSel')}</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {HOME_PRESETS.map(p => {
                   const Icon = HOME_ICONS.find(i => i.key === p.iconKey)!.Icon
-                  const isSel = homeName === p.name && homeIconKey === p.iconKey
+                  const translatedName = t(p.nameKey)
+                  const isSel = homeName === translatedName && homeIconKey === p.iconKey
                   return (
-                    <button key={p.name} onClick={() => { setHomeIconKey(p.iconKey); setHomeName(p.name) }}
+                    <button key={p.nameKey} onClick={() => { setHomeIconKey(p.iconKey); setHomeName(translatedName) }}
                       style={chipStyle(isSel)}>
-                      <Icon size={14} strokeWidth={isSel ? 2.2 : 1.8} />{p.name}
+                      <Icon size={14} strokeWidth={isSel ? 2.2 : 1.8} />{translatedName}
                     </button>
                   )
                 })}
@@ -163,18 +228,18 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={labelSt}>Naam *</label>
+              <label style={labelSt}>{t('onboard.step1.nameLabel')}</label>
               <input type="text" value={homeName} onChange={e => setHomeName(e.target.value)}
-                placeholder="Ghar, PG, Sasural..." style={inputSt} autoFocus />
+                placeholder={t('onboard.step1.namePH')} style={inputSt} autoFocus />
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={labelSt}>Icon</label>
+              <label style={labelSt}>{t('onboard.step1.iconLabel')}</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {HOME_ICONS.map(({ key, Icon, label }) => {
+                {HOME_ICONS.map(({ key, Icon, labelKey }) => {
                   const isSel = homeIconKey === key
                   return (
-                    <button key={key} onClick={() => setHomeIconKey(key)} title={label}
+                    <button key={key} onClick={() => setHomeIconKey(key)} title={t(labelKey)}
                       style={iconBtnStyle(isSel)}>
                       <Icon size={20} strokeWidth={isSel ? 2.2 : 1.7} color={isSel ? 'var(--primary)' : 'var(--text-secondary)'} />
                     </button>
@@ -184,18 +249,18 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             </div>
 
             <div style={{ marginBottom: 28 }}>
-              <label style={labelSt}>City (optional)</label>
+              <label style={labelSt}>{t('onboard.step1.cityLabel')}</label>
               <div style={{ position: 'relative' }}>
                 <MapPin size={15} color="var(--text-tertiary)"
                   style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                 <input type="text" value={homeCity} onChange={e => setHomeCity(e.target.value)}
-                  placeholder="Delhi, Jaipur, Lucknow..." style={{ ...inputSt, paddingLeft: 36 }} />
+                  placeholder={t('onboard.step1.cityPH')} style={{ ...inputSt, paddingLeft: 36 }} />
               </div>
             </div>
 
             <button onClick={() => homeName.trim() && setStep(2)} disabled={!homeName.trim()}
               style={primaryBtn(!homeName.trim())}>
-              Aage badho <ChevronRight size={18} strokeWidth={2.5} />
+              {t('common.next')} <ChevronRight size={18} strokeWidth={2.5} />
             </button>
           </div>
         )}
@@ -204,19 +269,21 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         {step === 2 && (
           <div style={{ animation: 'slideIn 350ms var(--ease-out) both' }}>
             <div style={{ marginBottom: 28 }}>
-              <div style={stepLabel}>Step 2 of 3</div>
-              <h1 style={heading}>Rooms add karo</h1>
+              <div style={stepLabel}>{t('onboard.step2.label')}</div>
+              <h1 style={heading}>{t('onboard.step2.title')}</h1>
               <Sofa size={26} strokeWidth={1.6} color="var(--primary)" style={{ margin: '6px 0 8px' }} />
-              <p style={sub}><span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{homeName}</span> mein kaun kaun se rooms hain?</p>
+              <p style={sub}>{t('onboard.step2.sub', { name: homeName })}</p>
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={labelSt}>Tap karke select karo</label>
+              <label style={labelSt}>{t('onboard.step2.tapSel')}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {ROOM_PRESETS.map(({ icon: RIcon, name }) => {
-                  const isSel = selectedRooms.includes(name)
+                {ROOM_PRESETS.map(({ icon: RIcon, nameKey }) => {
+                  const translatedName = t(nameKey)
+                  // Notice we store the translated room name directly to save appropriately in DB
+                  const isSel = selectedRooms.includes(translatedName)
                   return (
-                    <button key={name} onClick={() => toggleRoom(name)}
+                    <button key={nameKey} onClick={() => toggleRoom(translatedName)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', borderRadius: 14,
@@ -232,7 +299,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                         <RIcon size={18} strokeWidth={1.8} color={isSel ? 'var(--primary)' : 'var(--text-secondary)'} />
                       </div>
                       <span style={{ fontSize: 14, fontWeight: 500, color: isSel ? 'var(--primary)' : 'var(--text-primary)', flex: 1 }}>
-                        {name}
+                        {translatedName}
                       </span>
                       {isSel && <Check size={16} strokeWidth={2.5} color="var(--primary)" />}
                     </button>
@@ -242,11 +309,11 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             </div>
 
             <div style={{ marginBottom: 28 }}>
-              <label style={labelSt}>Ya khud likho</label>
+              <label style={labelSt}>{t('onboard.step2.custom')}</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input type="text" value={customRoom} onChange={e => setCustomRoom(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addCustomRoom()}
-                  placeholder="Terrace, Balcony, Pooja room..." style={{ ...inputSt, flex: 1 }} />
+                  placeholder={t('onboard.step2.customPH')} style={{ ...inputSt, flex: 1 }} />
                 <button onClick={addCustomRoom} style={{
                   width: 44, height: 44, borderRadius: 12, flexShrink: 0, border: 'none',
                   background: customRoom.trim() ? 'var(--primary)' : 'var(--bg-elevated)',
@@ -256,16 +323,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   <Plus size={18} strokeWidth={2.5} color={customRoom.trim() ? '#FAF6F0' : 'var(--text-tertiary)'} />
                 </button>
               </div>
-              {selectedRooms.filter(r => !ROOM_PRESETS.map(p => p.name).includes(r)).length > 0 && (
+              {selectedRooms.filter(r => !ROOM_PRESETS.map(p => t(p.nameKey)).includes(r)).length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                  {selectedRooms.filter(r => !ROOM_PRESETS.map(p => p.name).includes(r)).map(r => (
+                  {selectedRooms.filter(r => !ROOM_PRESETS.map(p => t(p.nameKey)).includes(r)).map(r => (
                     <div key={r} onClick={() => toggleRoom(r)} style={{
-                      padding: '5px 12px', borderRadius: 100, cursor: 'pointer',
+                      padding: '5px 10px 5px 12px', borderRadius: 100, cursor: 'pointer',
                       background: 'var(--primary-pale)', border: '1px solid rgba(200,96,58,0.2)',
                       fontSize: 12, fontWeight: 500, color: 'var(--primary)',
                       display: 'flex', alignItems: 'center', gap: 5,
                     }}>
-                      {r} <span style={{ opacity: 0.6 }}>×</span>
+                      {r}
+                      <X size={10} strokeWidth={2.5} color="rgba(200,96,58,0.6)" />
                     </div>
                   ))}
                 </div>
@@ -278,7 +346,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               </button>
               <button onClick={() => selectedRooms.length > 0 && setStep(3)} disabled={selectedRooms.length === 0}
                 style={{ ...primaryBtn(selectedRooms.length === 0), flex: 1 }}>
-                Aage badho <ChevronRight size={18} strokeWidth={2.5} />
+                {t('common.next')} <ChevronRight size={18} strokeWidth={2.5} />
               </button>
             </div>
           </div>
@@ -288,10 +356,10 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         {step === 3 && (
           <div style={{ animation: 'slideIn 350ms var(--ease-out) both' }}>
             <div style={{ marginBottom: 28 }}>
-              <div style={stepLabel}>Step 3 of 3</div>
-              <h1 style={heading}>Sab theek hai?</h1>
+              <div style={stepLabel}>{t('onboard.step3.label')}</div>
+              <h1 style={heading}>{t('onboard.step3.title')}</h1>
               <Check size={26} strokeWidth={2} color="var(--primary)" style={{ margin: '6px 0 8px' }} />
-              <p style={sub}>Ek baar check karo, phir shuru karte hain!</p>
+              <p style={sub}>{t('onboard.step3.sub')}</p>
             </div>
 
             <div style={{
@@ -318,7 +386,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               </div>
               <div style={{ height: 1, background: 'var(--border-soft)', marginBottom: 14 }} />
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                {selectedRooms.length} Rooms
+                {t('onboard.step3.rooms', { count: selectedRooms.length })}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {selectedRooms.map(r => (
@@ -336,7 +404,10 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 <ArrowRight size={18} strokeWidth={2} style={{ transform: 'rotate(180deg)' }} color="var(--text-secondary)" />
               </button>
               <button onClick={handleFinish} disabled={loading} style={{ ...primaryBtn(loading), flex: 1 }}>
-                {loading ? 'Setting up...' : <><Rocket size={16} strokeWidth={2} /> Shuru karo</>}
+                {loading
+                  ? t('onboard.finish.loading')
+                  : <><Rocket size={16} strokeWidth={2} /> {t('onboard.finish.btn')}</>
+                }
               </button>
             </div>
           </div>
@@ -353,7 +424,6 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   )
 }
 
-// ── Styles ──────────────────────────────────────────────────────────
 const stepLabel: React.CSSProperties = {
   fontSize: 13, color: 'var(--primary)', fontWeight: 600,
   marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase',

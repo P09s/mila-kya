@@ -9,6 +9,7 @@ import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 import { OnboardingWizard } from '@/components/ui/OnboardingWizard'
 import { AppWalkthrough } from '@/components/ui/AppWalkthrough'
 import { AckProvider } from '@/components/ui/ActionConfirmation'
+import { LangProvider } from '@/lib/useLanguage'
 import { HomeScreen }    from './components/HomeScreen'
 import { SearchScreen }  from './components/SearchScreen'
 import { ScanScreen }    from './components/ScanScreen'
@@ -122,74 +123,76 @@ export default function AppShell() {
 
   return (
     // AckProvider wraps everything — position:fixed overlay renders here, above all tabs
-    <AckProvider>
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100dvh', background: 'var(--bg-base)' }}>
-        <div
-          ref={appContainerRef}
-          style={{
-            width: '100%', maxWidth: 430, height: '100dvh',
-            background: 'var(--bg-base)', position: 'relative',
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-            overscrollBehavior: 'none',
-          }}
-        >
-          <div ref={sliderRef} className="tab-slider" style={{ flex: 1 }}>
-            {[0,1,2,3,4].map((i) => (
-              <div key={i} className="tab-slide scrollbar-hide">
-                {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} onMutated={handleItemAdded} />
-                : i === 1 ? <SearchScreen onMutated={handleItemAdded} refreshKey={searchKey} />
-                : i === 2 ? <ScanScreen onAdded={handleItemAdded} />
-                :i === 3 ? <GharScreen 
-                  isVisible={activeTab === 3 || showWalkthrough} 
-                  onActiveHomeChanged={handleItemAdded} 
-                  refreshKey={refreshKey} 
-                />
-                : <ProfileScreen refreshKey={refreshKey}/>}
-              </div>
-            ))}
-          </div>
-
-          {!showOnboarding && (
-            <>
-              <div className="fab" style={{
-                opacity: activeTab === 2 || showWalkthrough ? 0 : 1,
-                transform: activeTab === 2 || showWalkthrough ? 'scale(0.6)' : 'scale(1)',
-                pointerEvents: activeTab === 2 || showWalkthrough ? 'none' : 'auto',
-                transition: 'opacity 200ms ease, transform 200ms var(--spring)',
-              }}>
-                <FAB onClick={() => setSheetOpen(true)} />
-              </div>
-              <GlassTabBar activeTab={activeTab} onTabChange={handleTabChange} userInitial={userInitial} />
-            </>
-          )}
-
-          <QuickAddSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} onAdded={handleItemAdded} />
-
-          {showOnboarding && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 100, overflowY: 'auto', overscrollBehavior: 'contain', background: 'var(--bg-base)' }}>
-              <OnboardingWizard onComplete={() => {
-                localStorage.setItem('milakya_onboarded', '1')
-                setShowOnboarding(false)
-                setRefreshKey(k => k + 1)
-                handleTabChange(3) 
-                setShowWalkthrough(true)
-              }} />
+    <LangProvider>
+      <AckProvider>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100dvh', background: 'var(--bg-base)' }}>
+          <div
+            ref={appContainerRef}
+            style={{
+              width: '100%', maxWidth: 430, height: '100dvh',
+              background: 'var(--bg-base)', position: 'relative',
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              overscrollBehavior: 'none',
+            }}
+          >
+            <div ref={sliderRef} className="tab-slider" style={{ flex: 1 }}>
+              {[0,1,2,3,4].map((i) => (
+                <div key={i} className="tab-slide scrollbar-hide">
+                  {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} onMutated={handleItemAdded} />
+                  : i === 1 ? <SearchScreen onMutated={handleItemAdded} refreshKey={searchKey} />
+                  : i === 2 ? <ScanScreen onAdded={handleItemAdded} />
+                  :i === 3 ? <GharScreen 
+                    isVisible={activeTab === 3 || showWalkthrough} 
+                    onActiveHomeChanged={handleItemAdded} 
+                    refreshKey={refreshKey} 
+                  />
+                  : <ProfileScreen refreshKey={refreshKey}/>}
+                </div>
+              ))}
             </div>
-          )}
 
-          {showWalkthrough && (
-            <AppWalkthrough
-              containerRef={appContainerRef}
-              onTabChange={handleTabChange}
-              onDone={() => { 
-                localStorage.setItem('milakya_walkthrough_seen', '1')
-                setShowWalkthrough(false)
-                handleTabChange(0) 
-              }}
-            />
-          )}
+            {!showOnboarding && (
+              <>
+                <div className="fab" style={{
+                  opacity: activeTab === 2 || showWalkthrough ? 0 : 1,
+                  transform: activeTab === 2 || showWalkthrough ? 'scale(0.6)' : 'scale(1)',
+                  pointerEvents: activeTab === 2 || showWalkthrough ? 'none' : 'auto',
+                  transition: 'opacity 200ms ease, transform 200ms var(--spring)',
+                }}>
+                  <FAB onClick={() => setSheetOpen(true)} />
+                </div>
+                <GlassTabBar activeTab={activeTab} onTabChange={handleTabChange} userInitial={userInitial} />
+              </>
+            )}
+
+            <QuickAddSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} onAdded={handleItemAdded} />
+
+            {showOnboarding && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 100, overflowY: 'auto', overscrollBehavior: 'contain', background: 'var(--bg-base)' }}>
+                <OnboardingWizard onComplete={() => {
+                  localStorage.setItem('milakya_onboarded', '1')
+                  setShowOnboarding(false)
+                  setRefreshKey(k => k + 1)
+                  handleTabChange(3) 
+                  setShowWalkthrough(true)
+                }} />
+              </div>
+            )}
+
+            {showWalkthrough && (
+              <AppWalkthrough
+                containerRef={appContainerRef}
+                onTabChange={handleTabChange}
+                onDone={() => { 
+                  localStorage.setItem('milakya_walkthrough_seen', '1')
+                  setShowWalkthrough(false)
+                  handleTabChange(0) 
+                }}
+              />
+            )}
+          </div>
         </div>
-      </div>
-    </AckProvider>
+      </AckProvider>
+    </LangProvider>
   )
 }

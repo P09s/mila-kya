@@ -9,6 +9,7 @@ import { getHomes, setActiveHome, deleteHome } from '@/lib/homes'
 import { getItemsByHome } from '@/lib/items'
 import { getHomeIcon } from '@/lib/homeIcons'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
 import type { Home } from '@/lib/types'
 
 export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: { 
@@ -17,6 +18,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
   refreshKey?: number 
 }) {
   const { trigger } = useAck()
+  const { t } = useLanguage()
   const [homes, setHomes] = useState<Home[]>([])
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -76,7 +78,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
   if (loading) {
     return (
       <>
-        <LargeTitle title="Mere Ghar" subtitle="Sab jagah ek jagah" />
+        <LargeTitle title={t('ghar.title')} subtitle={t('ghar.subtitle')} />
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[1, 2, 3].map((n) => <div key={n} style={{ height: 80, borderRadius: 18, background: 'var(--bg-surface)', opacity: 0.5 }} />)}
         </div>
@@ -86,7 +88,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
 
   return (
     <>
-      <LargeTitle title="Mere Ghar" subtitle="Sab jagah ek jagah" />
+      <LargeTitle title={t('ghar.title')} subtitle={t('ghar.subtitle')} />
 
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
@@ -104,11 +106,11 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
                     {activeHome.name}
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.7)', marginTop: 2 }}>
-                    {activeHome.city ?? 'No city'} · {itemCounts[activeHome.id] ?? 0} items
+                    {activeHome.city ?? t('ghar.noCity')} · {t('common.items', itemCounts[activeHome.id] ?? 0)}
                   </div>
                 </div>
-                <div style={{ background: 'rgba(76,175,125,0.2)', border: '1px solid rgba(76,175,125,0.4)', borderRadius: 100, padding: '3px 10px', fontSize: 10, fontWeight: 500, color: '#4CAF7D' }}>
-                  Ab yahan hain
+                <div style={{ background: 'rgba(250,246,240,0.15)', border: '1px solid rgba(250,246,240,0.3)', borderRadius: 100, padding: '3px 10px', fontSize: 10, fontWeight: 600, color: '#FAF6F0' }}>
+                  {t('ghar.activeTag')}
                 </div>
               </div>
             </div>
@@ -135,7 +137,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
                     {home.name}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                    {home.city ?? 'No city'} · {itemCounts[home.id] ?? 0} items
+                    {home.city ?? t('ghar.noCity')} · {t('common.items', itemCounts[home.id] ?? 0)}
                   </div>
                 </div>
               </div>
@@ -145,7 +147,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
                 onClick={(e) => { e.stopPropagation(); handleSetActive(home.id) }}
                 style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0 }}
               >
-                Yahan jao
+                {t('ghar.goHere')}
               </button>
 
               {/* Delete — inline confirm */}
@@ -153,11 +155,11 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <button onClick={(e) => { e.stopPropagation(); setPendingDeleteId(null) }}
                     style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    Nahi
+                    {t('ghar.deleteNo')}
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); handleDelete(home.id) }}
                     style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#B91C1C', cursor: 'pointer' }}>
-                    Haan
+                    {t('ghar.deleteYes')}
                   </button>
                 </div>
               ) : (
@@ -175,9 +177,9 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
           style={{ border: '1.5px dashed rgba(200,96,58,0.3)', borderRadius: 18, padding: '14px 16px', textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>
-            <Plus size={15} strokeWidth={2.5} /> Naya ghar jodon
+            <Plus size={15} strokeWidth={2.5} /> {t('ghar.addNew')}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>PG, Office, Storage...</div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{t('ghar.addNewSub')}</div>
         </div>
       </div>
 
@@ -189,7 +191,7 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
         onAdded={() => { 
           setAddSheetOpen(false)
           loadHomes()
-          onActiveHomeChanged?.()  // ← add this — notifies page.tsx to increment profileKey
+          onActiveHomeChanged?.()
         }}
       />
 

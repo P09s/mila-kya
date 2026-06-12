@@ -1,11 +1,13 @@
 import { Home, Search, Camera, Building2, User } from 'lucide-react'
+import { useLanguage } from '@/lib/useLanguage'
+import type { DictKey } from '@/lib/i18n'
 
-const TABS = [
-  { icon: Home,      label: 'Home',    index: 0 },
-  { icon: Search,    label: 'Dhoondo', index: 1 },
-  { icon: Camera,    label: 'Scan',    index: 2 },
-  { icon: Building2, label: 'Ghar',    index: 3 },
-  { icon: User,      label: 'Profile', index: 4 },
+const TABS: { icon: React.FC<any>; labelKey: DictKey; index: number }[] = [
+  { icon: Home,      labelKey: 'tabs.home',    index: 0 },
+  { icon: Search,    labelKey: 'tabs.search',  index: 1 },
+  { icon: Camera,    labelKey: 'tabs.scan',    index: 2 },
+  { icon: Building2, labelKey: 'tabs.homes',   index: 3 },
+  { icon: User,      labelKey: 'tabs.profile', index: 4 },
 ]
 
 interface GlassTabBarProps {
@@ -15,6 +17,8 @@ interface GlassTabBarProps {
 }
 
 export function GlassTabBar({ activeTab, onTabChange, userInitial }: GlassTabBarProps) {
+  const { t } = useLanguage()
+
   return (
     <div className="tab-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 4px 8px' }}>
       {TABS.map((tab) => {
@@ -35,7 +39,7 @@ export function GlassTabBar({ activeTab, onTabChange, userInitial }: GlassTabBar
             onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = '' }}
             onTouchStart={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.92)' }}
             onTouchEnd={(e) => { (e.currentTarget as HTMLElement).style.transform = '' }}
-            aria-label={tab.label}
+            aria-label={t(tab.labelKey)}
           >
             {tab.index === 0 && userInitial ? (
               <div style={{
@@ -62,7 +66,7 @@ export function GlassTabBar({ activeTab, onTabChange, userInitial }: GlassTabBar
               color: isActive ? 'var(--primary)' : 'var(--text-tertiary)',
               letterSpacing: '0.01em', transition: 'color 200ms',
             }}>
-              {tab.label}
+              {t(tab.labelKey)}
             </span>
             {isActive && (
               <span style={{

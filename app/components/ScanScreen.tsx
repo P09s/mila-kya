@@ -12,6 +12,7 @@ import { detectItemsFromPhoto, scanDiaryPage } from '@/lib/gemini'
 import { createItem } from '@/lib/items'
 import { getHomes } from '@/lib/homes'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
 import type { DetectedItem, DiaryItem } from '@/lib/gemini'
 import { getRoomsByHome, createRoom } from '@/lib/rooms'
 import { getHomeIcon } from '@/lib/homeIcons'
@@ -21,6 +22,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
   const photoInputRef = useRef<HTMLInputElement>(null)
   const diaryInputRef = useRef<HTMLInputElement>(null)
   const { trigger } = useAck()
+  const { t } = useLanguage()
 
   const [photoScanning, setPhotoScanning]   = useState(false)
   const [diaryScanning, setDiaryScanning]   = useState(false)
@@ -119,11 +121,11 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       setPhotoSheetOpen(true)
     } catch (e: any) {
       if (e?.message === 'wrong_image_type') {
-        setScanError('📒 Yeh diary ya list lagti hai. Photo scan ke liye kisi cheez ki photo lo.')
+        setScanError(t('scan.error.photo'))
       } else if (e?.message === 'rate_limit') {
-        setScanError('⏳ Thoda ruko, 1 minute baad dobara try karo.')
+        setScanError(t('scan.error.rateLimit'))
       } else {
-        setScanError('Photo scan failed. Dobara try karo.')
+        setScanError(t('scan.error.generic'))
       }
     } finally { setPhotoScanning(false); e.target.value = '' }
   }
@@ -140,11 +142,11 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       setDiarySheetOpen(true)
     } catch (e: any) {
       if (e?.message === 'wrong_image_type') {
-        setScanError('📷 Yeh photo lagti hai, diary nahi. Haath se likhi list ki photo lo.')
+        setScanError(t('scan.error.diary'))
       } else if (e?.message === 'rate_limit') {
-        setScanError('⏳ Thoda ruko, 1 minute baad dobara try karo.')
+        setScanError(t('scan.error.rateLimit'))
       } else {
-        setScanError('Diary scan failed. Dobara try karo.')
+        setScanError(t('scan.error.generic'))
       }
     } finally { setDiaryScanning(false); e.target.value = '' }
   }
@@ -172,7 +174,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         const item = photoResults[i]
         return createItem({
           name: item.name, emoji: 'package',
-          category: item.category ?? 'Other',
+          category: item.category ?? t('common.other'),
           is_important: false,
           home_id: targetHomeId,
           room_id: bulkRoomId || undefined,
@@ -227,7 +229,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       await Promise.all(Array.from(selectedDiaryIdxs).map((i) => {
         const item = diaryResults[i]
         return createItem({
-          name: item.name, emoji: 'package', category: 'Other', is_important: false,
+          name: item.name, emoji: 'package', category: t('common.other'), is_important: false,
           home_id: targetHomeId,
           room_id: resolveRoom(item.room_hint),
           sub_location: item.sub_location || undefined,
@@ -248,7 +250,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     setSelectedItem(item); setPhotoSheetOpen(false); setTimeout(() => setQuickAddOpen(true), 350)
   }
   function openSingleDiary(item: DiaryItem) {
-    setSelectedItem({ name: item.name, category: 'Other', confidence: 1, emoji: '📦' })
+    setSelectedItem({ name: item.name, category: t('common.other'), confidence: 1, emoji: '📦' })
     setDiarySheetOpen(false); setTimeout(() => setQuickAddOpen(true), 350)
   }
 
@@ -267,7 +269,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <MapPin size={12} strokeWidth={2.2} color="var(--primary)" />
-            <span>Kahan rakhein? ({count} items)</span>
+            <span>{t('scan.location.title', count)}</span>
           </div>
           <button onClick={resetBulkLocation} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
             <XIcon size={14} strokeWidth={2} color="var(--text-tertiary)" />
@@ -307,7 +309,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
               fontFamily: 'Inter, sans-serif', outline: 'none',
             }}
           >
-            <option value="">-- Room select karo (optional) --</option>
+            <option value="">{t('scan.location.roomPlaceholder')}</option>
             {bulkRooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         )}
@@ -322,8 +324,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         }}>
           {bulkAdding
-            ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Adding...</>
-            : <><Check size={15} strokeWidth={2.5} /> {count} cheez add karo</>
+            ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> {t('scan.location.adding')}</>
+            : <><Check size={15} strokeWidth={2.5} /> {t('scan.location.addBtn', count)}</>
           }
         </button>
       </div>
@@ -339,7 +341,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
           style={bulkBtnStyle}
         >
           <MapPin size={15} strokeWidth={2.2} color="#FAF6F0" />
-          {count} cheez add karo
+          {t('scan.location.addBtn', count)}
         </button>
       </div>
     )
@@ -347,7 +349,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
 
   return (
     <>
-      <LargeTitle title="Scan karo" subtitle="Photo ya diary — AI samjhega" />
+      <LargeTitle title={t('scan.title')} subtitle={t('scan.subtitle')} />
 
       <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
       <input ref={diaryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleDiaryFile} />
@@ -376,10 +378,10 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Saman ki photo lo</span>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', background: 'var(--primary)', color: '#FAF6F0', padding: '2px 6px', borderRadius: 100, textTransform: 'uppercase' }}>AI</span>
+                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{t('scan.camera.title')}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', background: 'var(--primary)', color: '#FAF6F0', padding: '2px 6px', borderRadius: 100, textTransform: 'uppercase' }}>{t('common.ai')}</span>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Ek saath kai cheezein detect karega</div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{t('scan.camera.sub')}</div>
             </div>
           </div>
           <button
@@ -389,8 +391,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
             style={{ marginTop: 16, width: '100%', background: photoScanning ? 'var(--bg-elevated)' : 'var(--primary)', color: photoScanning ? 'var(--text-tertiary)' : '#FAF6F0', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, border: 'none', cursor: photoScanning ? 'not-allowed' : 'pointer', fontFamily: 'Outfit, sans-serif', boxShadow: photoScanning ? 'none' : '0 4px 16px rgba(200,96,58,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 200ms' }}
           >
             {photoScanning
-              ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Scan ho raha hai...</>
-              : <><Camera size={16} strokeWidth={2} /> Camera kholein</>
+              ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> {t('scan.camera.scanning')}</>
+              : <><Camera size={16} strokeWidth={2} /> {t('scan.camera.btn')}</>
             }
           </button>
         </div>
@@ -405,15 +407,15 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
               }
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 3 }}>Diary / List scan karo</div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Haath se likhi list — Hindi aur English dono</div>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 3 }}>{t('scan.diary.title')}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{t('scan.diary.sub')}</div>
             </div>
           </div>
           {showDiaryTip && (
             <div style={{ marginTop: 12, background: 'var(--gold-pale)', border: '1px solid rgba(196,146,58,0.2)', borderRadius: 10, padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <Info size={13} color="var(--gold)" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6, flex: 1 }}>
-                <span style={{ fontWeight: 600 }}>Best results:</span> Achhi roshni, no blur, poora page frame mein. Table format (Room | Almirah | Item) mein ho toh AI jagah khud assign karega.
+                <span style={{ fontWeight: 600 }}>Best results:</span> {t('scan.diary.tip')}
               </div>
               <button onClick={() => setShowDiaryTip(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
                 <XIcon size={12} strokeWidth={2.2} color="var(--text-tertiary)" />
@@ -427,8 +429,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
             style={{ marginTop: 14, width: '100%', background: 'var(--gold-pale)', color: diaryScanning ? 'var(--text-tertiary)' : 'var(--gold)', borderRadius: 14, padding: '12px', fontSize: 14, fontWeight: 600, border: '1px solid rgba(196,146,58,0.25)', cursor: diaryScanning ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 200ms' }}
           >
             {diaryScanning
-              ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Scan ho raha hai...</>
-              : <><BookOpen size={15} strokeWidth={2} /> Diary Scan karo</>
+              ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> {t('scan.camera.scanning')}</>
+              : <><BookOpen size={15} strokeWidth={2} /> {t('scan.diary.btn')}</>
             }
           </button>
         </div>
@@ -439,9 +441,9 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
           onClick={() => { setSelectedItem(null); setQuickAddOpen(true) }}
           style={{ background: 'var(--bg-surface)', borderRadius: 14, border: '1.5px dashed rgba(42,27,16,0.12)', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 12, transition: 'opacity 150ms' }}
         >
-          <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Ya manually type karo</span>
+          <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{t('scan.manual.placeholder')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>
-            <Plus size={13} strokeWidth={2.5} /> Quick Add
+            <Plus size={13} strokeWidth={2.5} /> {t('scan.manual.btn')}
           </div>
         </div>
 
@@ -452,7 +454,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       <BottomSheet
         isOpen={photoSheetOpen}
         onClose={() => { setPhotoSheetOpen(false); resetBulkLocation() }}
-        title={`${photoResults.length} cheez mili 🎉`}
+        title={t('scan.results.photo', { count: photoResults.length })}
         height="80"
         footer={
           selectedPhotoIdxs.size > 0
@@ -470,15 +472,15 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                   ? <CheckSquare size={15} color="var(--primary)" strokeWidth={2} />
                   : <Square size={15} color="var(--text-tertiary)" strokeWidth={1.8} />
                 }
-                <span>{selectedPhotoIdxs.size === photoResults.length ? 'Deselect all' : 'Select all'}</span>
+                <span>{selectedPhotoIdxs.size === photoResults.length ? t('scan.results.deselectAll') : t('scan.results.selectAll')}</span>
               </button>
               <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                {selectedPhotoIdxs.size > 0 ? `${selectedPhotoIdxs.size} selected` : 'Tap to select'}
+                {selectedPhotoIdxs.size > 0 ? t('scan.results.selected', selectedPhotoIdxs.size) : t('scan.results.tapToSelect')}
               </span>
             </div>
           )}
           {photoResults.length === 0
-            ? <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 24, fontSize: 14 }}>Kuch detect nahi hua. Dobara try karo.</div>
+            ? <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 24, fontSize: 14 }}>{t('scan.results.none')}</div>
             : photoResults.map((item, i) => {
               const checked = selectedPhotoIdxs.has(i)
               return (
@@ -489,7 +491,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</div>
                       {item.name_hi && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.name_hi}</div>}
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{item.category} · {Math.round(item.confidence * 100)}% sure</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{item.category} · {t('scan.confidence', { pct: Math.round(item.confidence * 100) })}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -497,7 +499,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                       ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} />
                       : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />
                     }
-                    <button onClick={(e) => { e.stopPropagation(); openSinglePhoto(item) }} style={singleAddBtn} title="Add with full details">
+                    <button onClick={(e) => { e.stopPropagation(); openSinglePhoto(item) }} style={singleAddBtn} title={t('scan.results.addFull')}>
                       <Plus size={14} strokeWidth={2.2} color="var(--primary)" />
                     </button>
                   </div>
@@ -512,7 +514,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       <BottomSheet
         isOpen={diarySheetOpen}
         onClose={() => { setDiarySheetOpen(false); resetBulkLocation() }}
-        title={`${diaryResults.length} items mili 📒`}
+        title={t('scan.results.diary', { count: diaryResults.length })}
         height="80"
         footer={
           selectedDiaryIdxs.size > 0
@@ -530,15 +532,15 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                   ? <CheckSquare size={15} color="var(--primary)" strokeWidth={2} />
                   : <Square size={15} color="var(--text-tertiary)" strokeWidth={1.8} />
                 }
-                <span>{selectedDiaryIdxs.size === diaryResults.length ? 'Deselect all' : 'Select all'}</span>
+                <span>{selectedDiaryIdxs.size === diaryResults.length ? t('scan.results.deselectAll') : t('scan.results.selectAll')}</span>
               </button>
               <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                {selectedDiaryIdxs.size > 0 ? `${selectedDiaryIdxs.size} selected` : 'Tap to select'}
+                {selectedDiaryIdxs.size > 0 ? t('scan.results.selected', selectedDiaryIdxs.size) : t('scan.results.tapToSelect')}
               </span>
             </div>
           )}
           {diaryResults.length === 0
-            ? <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 24, fontSize: 14 }}>Kuch detect nahi hua. Dobara try karo.</div>
+            ? <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 24, fontSize: 14 }}>{t('scan.results.none')}</div>
             : diaryResults.map((item, i) => {
               const checked = selectedDiaryIdxs.has(i)
               return (
@@ -548,10 +550,11 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</div>
                     {(item.room_hint || item.sub_location) && (
                       <div style={{ fontSize: 11, color: 'var(--primary)', marginTop: 2 }}>
-                        📍 {[item.room_hint, item.sub_location].filter(Boolean).join(' › ')}
+                        <MapPin size={10} strokeWidth={2.2} color="var(--primary)" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />
+                        {[item.room_hint, item.sub_location].filter(Boolean).join(' › ')}
                       </div>
                     )}
-                    {item.quantity && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Qty: {item.quantity}</div>}
+                    {item.quantity && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t('scan.results.qty', { qty: item.quantity })}</div>}
                     {item.notes && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.notes}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -559,7 +562,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                       ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} />
                       : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />
                     }
-                    <button onClick={(e) => { e.stopPropagation(); openSingleDiary(item) }} style={singleAddBtn} title="Add with full details">
+                    <button onClick={(e) => { e.stopPropagation(); openSingleDiary(item) }} style={singleAddBtn} title={t('scan.results.addFull')}>
                       <Plus size={14} strokeWidth={2.2} color="var(--primary)" />
                     </button>
                   </div>

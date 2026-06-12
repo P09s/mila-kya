@@ -10,6 +10,7 @@ import { getHomeIcon } from '@/lib/homeIcons'
 import { CATEGORY_ICONS } from '@/lib/types'
 import type { ItemWithLocation, Home, Room } from '@/lib/types'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
 
 interface ItemDetailSheetProps {
   item: ItemWithLocation | null
@@ -26,7 +27,9 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
   const [selectedHomeId, setSelectedHomeId] = useState('')
   const [selectedRoomId, setSelectedRoomId] = useState('')
   const [saving, setSaving] = useState(false)
+  
   const { trigger } = useAck()
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (!isOpen) { setMoving(false); setConfirmDelete(false); return }
@@ -90,22 +93,26 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
     const locationPath = home && room
       ? `${home.name} → ${room.name}`
       : home ? home.name : 'Unknown location'
-    const notes = item.notes ? `\n📝 Note: ${item.notes}` : ''
-    const important = item.is_important ? '\n⭐ Important item' : ''
-    const date = new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    const msg = `📍 *${item.name}* rakha hai:\n🏠 ${locationPath}${notes}${important}\n\n🗓 Added: ${date}\n\n_MilaKya se bheja — milakya.app_`
+    
+    const notesStr = item.notes ? t('detail.whatsapp.note', { note: item.notes }) : ''
+    const impStr = item.is_important ? t('detail.whatsapp.important') : ''
+    const dateStr = new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    
+    const msg = t('detail.whatsapp.msg', {
+      name: item.name, location: locationPath, notes: notesStr, important: impStr, date: dateStr
+    })
+
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   if (!item) return null
 
-  // Use item.category directly — no ITEM_ICON_MAP needed
   const ItemIcon = CATEGORY_ICONS[item.category ?? 'Other'] ?? CATEGORY_ICONS['Other']
   const currentHome = item.homes
   const currentRoom = item.rooms
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="Item Details" height="85">
+    <BottomSheet isOpen={isOpen} onClose={onClose} title={t('detail.title')} height="85">
       <div style={{ padding: '20px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Item header */}
@@ -130,7 +137,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
         {/* Current location */}
         <div style={{ background: 'var(--primary-pale)', borderRadius: 14, padding: '12px 14px' }}>
           <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
-            Ab kahan hai
+            {t('detail.currentLoc')}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <MapPin size={14} strokeWidth={2} color="var(--primary)" />
@@ -139,7 +146,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
                 const HIcon = getHomeIcon(currentHome.icon ?? 'home')
                 return <HIcon size={14} strokeWidth={2} color="var(--text-primary)" />
               })()}
-              {currentHome?.name ?? 'No home'}
+              {currentHome?.name ?? t('detail.noHome')}
               {currentRoom ? ` › ${currentRoom.name}` : ''}
             </span>
           </div>
@@ -150,7 +157,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
           <div style={{ background: 'var(--bg-surface)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--border-soft)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <FileText size={13} strokeWidth={1.8} color="var(--text-tertiary)" />
-              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Note</span>
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('detail.note')}</span>
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.notes}</div>
           </div>
@@ -166,11 +173,11 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
               cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)',
             }}
           >
-            <MoveRight size={16} strokeWidth={2} /> Location change karo
+            <MoveRight size={16} strokeWidth={2} /> {t('detail.moveBtn')}
           </button>
         ) : (
           <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Naya location chuno</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('detail.newLoc')}</div>
 
             {/* Home picker */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -199,7 +206,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
               <select value={selectedRoomId} onChange={(e) => setSelectedRoomId(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border-soft)', background: 'var(--bg-surface)', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', outline: 'none' }}
               >
-                <option value="">-- Room select karo --</option>
+                <option value="">{t('detail.roomPh')}</option>
                 {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             )}
@@ -212,7 +219,7 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
                 cursor: 'pointer', boxShadow: '0 4px 12px rgba(200,96,58,0.3)',
               }}
             >
-              {saving ? 'Saving...' : '✓ Move karo'}
+              {saving ? t('common.loading') : t('detail.saveMove')}
             </button>
           </div>
         )}
@@ -227,18 +234,18 @@ export function ItemDetailSheet({ item, isOpen, onClose, onUpdated }: ItemDetail
               cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#fff',
             }}
           >
-            <Share2 size={14} strokeWidth={2} /> WhatsApp
+            <Share2 size={14} strokeWidth={2} /> {t('detail.whatsapp')}
           </button>
           
           {confirmDelete ? (
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => setConfirmDelete(false)}
                 style={{ padding: '11px 14px', borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
-                Nahi
+                {t('common.no')}
               </button>
               <button onClick={handleDelete}
                 style={{ padding: '11px 14px', borderRadius: 12, background: '#FEE2E2', border: '1px solid #FCA5A5', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#B91C1C' }}>
-                Haan
+                {t('common.yes')}
               </button>
             </div>
           ) : (

@@ -11,6 +11,7 @@ import type { Home, ItemWithLocation } from '@/lib/types'
 import { ItemDetailSheet } from '@/components/ui/ItemDetailSheet'
 import { AddHomeSheet } from '@/components/ui/AddHomeSheet'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
 
 const PREVIEW_COUNT = 4
 
@@ -30,6 +31,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
   const [addHomeOpen, setAddHomeOpen] = useState(false)
 
   const { trigger } = useAck()
+  const { t } = useLanguage()
 
   useEffect(() => {
     getHomes().then(async (data) => {
@@ -83,7 +85,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
   return (
     <>
 
-      <LargeTitle title="MilaKya" subtitle="Apna saman, apni jagah" />
+      <LargeTitle title={t('home.title')} subtitle={t('home.subtitle')} />
 
       {/* Active home card */}
       <div style={{ margin: '0 16px 12px' }}>
@@ -94,7 +96,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
         }}>
           <div>
             <div style={{ fontSize: 10, color: 'rgba(250,246,240,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>
-              Ab yahan hain
+              {t('home.activeLabel')}
             </div>
             <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: '#FAF6F0', marginTop: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
               {activeHome ? (() => {
@@ -104,7 +106,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
               {activeHome?.name ?? '...'}
             </div>
             <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.8)', marginTop: 2 }}>
-              {loading ? 'Loading...' : `${items.length} cheezein saved`}
+              {loading ? t('common.loading') : t('home.itemsSaved', items.length)}
             </div>
           </div>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4CAF7D', boxShadow: '0 0 0 3px rgba(76,175,125,0.3)' }} />
@@ -115,13 +117,13 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
       <div data-walkthrough="home-items-section">
         <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-            Aapki cheezein
+            {t('home.yourItems')}
           </span>
           <button
             onClick={onViewAll}
             style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
           >
-            Sab dekho <ChevronRight size={13} strokeWidth={2} />
+            {t('home.viewAll')} <ChevronRight size={13} strokeWidth={2} />
           </button>
         </div>
 
@@ -133,7 +135,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
           ) : items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-tertiary)', fontSize: 13 }}>
               <Package size={36} strokeWidth={1.4} color="var(--text-tertiary)" style={{ margin: '0 auto 10px', display: 'block', opacity: 0.4 }} />
-              Koi cheez nahi mili. FAB se add karo!
+              {t('home.empty')}
             </div>
           ) : (
             <>
@@ -158,7 +160,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
                   }}
                 >
                   <ChevronRight size={14} strokeWidth={2.5} />
-                  {items.length - PREVIEW_COUNT} aur cheezein dekho
+                  {t('home.viewMore', { count: items.length - PREVIEW_COUNT })}
                 </button>
               )}
             </>
@@ -171,13 +173,13 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
       {/* Homes section */}
       <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-          Mere ghar
+          {t('home.myHomes')}
         </span>
         <button
           onClick={() => setAddHomeOpen(true)}
           style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
         >
-          <Plus size={13} strokeWidth={2.5} /> Add
+          <Plus size={13} strokeWidth={2.5} /> {t('home.addHome')}
         </button>
       </div>
 
@@ -206,7 +208,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
                 {home.name}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                {count !== null ? `${count} items` : '—'}
+                {count !== null ? t('common.items', count) : '—'}
               </div>
             </div>
           )
@@ -219,7 +221,7 @@ export function HomeScreen({ onViewAll, onMutated }: HomeScreenProps) {
         item={selectedItem}
         isOpen={itemDetailOpen}
         onClose={() => setItemDetailOpen(false)}
-        onUpdated={() => { loadItems(); setItemDetailOpen(false); onMutated?.() }}  // ← add onMutated?.()
+        onUpdated={() => { loadItems(); setItemDetailOpen(false); onMutated?.() }}
       />
 
       <AddHomeSheet

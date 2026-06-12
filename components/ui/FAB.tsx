@@ -1,12 +1,15 @@
 'use client'
 
 import { Plus } from 'lucide-react'
+import { useLanguage } from '@/lib/useLanguage'
 
 interface FABProps {
   onClick?: () => void
 }
 
 export function FAB({ onClick }: FABProps) {
+  const { t } = useLanguage()
+
   const handleClick = () => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
     onClick?.()
@@ -28,7 +31,7 @@ export function FAB({ onClick }: FABProps) {
       onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = '' }}
       onTouchStart={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.88)' }}
       onTouchEnd={(e) => { (e.currentTarget as HTMLElement).style.transform = '' }}
-      aria-label="Quick add item"
+      aria-label={t('fab.quickAdd')}
     >
       <Plus size={24} strokeWidth={2.5} color="#FAF6F0" />
     </button>

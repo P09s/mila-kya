@@ -12,6 +12,8 @@ import { getAllItems } from '@/lib/items'
 import type { ItemWithLocation } from '@/lib/types'
 import { useTheme } from '@/lib/useTheme'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { useLanguage } from '@/lib/useLanguage'
+import type { Lang } from '@/lib/i18n'
 
 interface UserProfile {
   email: string | null
@@ -35,6 +37,8 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const { theme, toggle } = useTheme()
+  const { lang, setLang, t } = useLanguage()
+  const [langSheet, setLangSheet] = useState(false)
 
   // Profile only needs to load once
   useEffect(() => {
@@ -69,9 +73,9 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   }
 
   function providerLabel(p: string) {
-    if (p === 'google') return 'Google se login kiya'
-    if (p === 'email')  return 'Email se login kiya'
-    return 'Logged in'
+    if (p === 'google') return t('profile.loginGoogle')
+    if (p === 'email')  return t('profile.loginEmail')
+    return t('profile.loggedIn')
   }
 
   const displayName = profile?.name ?? profile?.email ?? '—'
@@ -81,8 +85,6 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
     setActionLoading(true)
     const supabase = createClient()
     await supabase.auth.signOut()
-    // Only clear the per-session onboarding flag — DB re-check restores it on next login.
-    // Preserve milakya_intro_seen and milakya_walkthrough_seen so neither replays.
     localStorage.removeItem('milakya_onboarded')
     window.location.replace('/auth/login')
   }
@@ -94,11 +96,11 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
       const { error } = await supabase.rpc('delete_user_account')
       if (error) throw error
       await supabase.auth.signOut()
-      localStorage.clear()  // Full wipe is correct for account deletion
+      localStorage.clear()
       window.location.replace('/intro')
     } catch (e) {
       console.error(e)
-      showToast('Kuch gadbad ho gayi. Dobara try karo.')
+      showToast(t('profile.error'))
       setActionLoading(false)
       setDialog(null)
     }
@@ -108,17 +110,17 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
     signout: {
       icon: <LogOut size={24} strokeWidth={1.8} color="#C0392B" />,
       iconBg: 'rgba(192,57,43,0.1)',
-      title: 'Sign out karo?',
-      body: 'Aap sign out ho jayenge. Dobara login karke wapas aa sakte hain.',
-      confirmLabel: 'Haan, sign out karo',
+      title: t('profile.signout.title'),
+      body: t('profile.signout.body'),
+      confirmLabel: t('profile.signout.confirm'),
       onConfirm: handleSignOut,
     },
     delete: {
       icon: <AlertTriangle size={24} strokeWidth={1.8} color="#C0392B" />,
       iconBg: 'rgba(192,57,43,0.1)',
-      title: 'Account delete karo?',
-      body: 'Yeh action undo nahi ho sakta. Aapke saare ghar, rooms, aur items hamesha ke liye delete ho jayenge.',
-      confirmLabel: 'Haan, delete karo',
+      title: t('profile.delete.title'),
+      body: t('profile.delete.body'),
+      confirmLabel: t('profile.delete.confirm'),
       onConfirm: handleDeleteAccount,
     },
   }
@@ -127,7 +129,7 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
 
   return (
     <div>
-      <LargeTitle title="Profile" subtitle="Aapka account" />
+      <LargeTitle title={t('profile.title')} subtitle={t('profile.subtitle')} />
 
       {toast && (
         <div style={{
@@ -166,14 +168,14 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               marginBottom: 12,
             }}>
-              {actionLoading ? 'Wait karo...' : activeDialog.confirmLabel}
+              {actionLoading ? t('common.waitKaro') : activeDialog.confirmLabel}
             </button>
             <button onClick={() => setDialog(null)} disabled={actionLoading} style={{
               width: '100%', padding: '14px', borderRadius: 14,
               background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)',
               fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer',
             }}>
-              Nahi, wapas jao
+              {t('profile.signout.cancel')}
             </button>
           </div>
         )}
@@ -206,7 +208,7 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>{profile.email}</div>
               )}
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                {profile ? providerLabel(profile.provider) : 'Loading...'}
+                {profile ? providerLabel(profile.provider) : t('common.loading')}
               </div>
             </div>
           </div>
@@ -218,9 +220,9 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
             boxShadow: '0 1px 4px rgba(42,27,16,0.07)',
           }}>
             {[
-              { Icon: Home,    value: stats?.homes,     label: 'Ghars',     color: 'var(--primary)' },
-              { Icon: Package, value: stats?.items,     label: 'Items',     color: 'var(--sage)'    },
-              { Icon: Star,    value: stats?.important, label: 'Important', color: 'var(--gold)'    },
+              { Icon: Home,    value: stats?.homes,     label: t('profile.stats.homes'),     color: 'var(--primary)' },
+              { Icon: Package, value: stats?.items,     label: t('profile.stats.items'),     color: 'var(--sage)'    },
+              { Icon: Star,    value: stats?.important, label: t('profile.stats.important'), color: 'var(--gold)'    },
             ].map(({ Icon, value, label, color }, i, arr) => (
               <div key={label} style={{
                 flex: 1, textAlign: 'center',
@@ -254,7 +256,7 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
                 ? <Moon size={16} strokeWidth={1.8} color="var(--text-secondary)" />
                 : <Sun  size={16} strokeWidth={1.8} color="var(--text-secondary)" />}
               <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>
-                {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                {theme === 'dark' ? t('profile.darkMode') : t('profile.lightMode')}
               </span>
             </div>
             <div style={{
@@ -272,32 +274,37 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
             </div>
           </div>
 
-          <div style={settingRow(true)}>
+          <div className="press-scale" onClick={() => setLangSheet(true)} style={settingRow(true)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Globe size={16} strokeWidth={1.8} color="var(--text-secondary)" />
-              <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>Bhasha (Language)</span>
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--primary)' }}>English</span>
-          </div>
-
-          <div className="press-scale" onClick={() => showToast('Jald aayega — Phase 2!')} style={settingRow(true)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Users size={16} strokeWidth={1.8} color="var(--text-secondary)" />
-              <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>Family Sharing</span>
+              <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{t('profile.language')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 11, background: 'var(--primary-pale)', color: 'var(--primary)', padding: '2px 7px', borderRadius: 100, fontWeight: 500 }}>Jald</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--primary)' }}>
+                {lang === 'hinglish' ? t('lang.hinglish') : lang === 'en' ? t('lang.en') : t('lang.hi')}
+              </span>
               <ChevronRight size={14} strokeWidth={2} color="var(--text-tertiary)" />
             </div>
           </div>
 
-          <div className="press-scale" onClick={() => showToast('Jald aayega — Phase 2!')} style={settingRow(false)}>
+          <div className="press-scale" onClick={() => showToast(t('profile.comingSoonToast'))} style={settingRow(true)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <FileDown size={16} strokeWidth={1.8} color="var(--text-secondary)" />
-              <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>Export Inventory</span>
+              <Users size={16} strokeWidth={1.8} color="var(--text-secondary)" />
+              <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{t('profile.familySharing')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 11, background: 'var(--primary-pale)', color: 'var(--primary)', padding: '2px 7px', borderRadius: 100, fontWeight: 500 }}>Jald</span>
+              <span style={{ fontSize: 11, background: 'var(--primary-pale)', color: 'var(--primary)', padding: '2px 7px', borderRadius: 100, fontWeight: 500 }}>{t('common.comingSoon')}</span>
+              <ChevronRight size={14} strokeWidth={2} color="var(--text-tertiary)" />
+            </div>
+          </div>
+
+          <div className="press-scale" onClick={() => showToast(t('profile.comingSoonToast'))} style={settingRow(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <FileDown size={16} strokeWidth={1.8} color="var(--text-secondary)" />
+              <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{t('profile.export')}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 11, background: 'var(--primary-pale)', color: 'var(--primary)', padding: '2px 7px', borderRadius: 100, fontWeight: 500 }}>{t('common.comingSoon')}</span>
               <ChevronRight size={14} strokeWidth={2} color="var(--text-tertiary)" />
             </div>
           </div>
@@ -311,7 +318,7 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
           boxShadow: '0 1px 4px rgba(42,27,16,0.07)',
         }}>
           <LogOut size={16} strokeWidth={1.8} color="#C0392B" />
-          <span style={{ fontSize: 14, color: '#C0392B', fontWeight: 500 }}>Sign Out</span>
+          <span style={{ fontSize: 14, color: '#C0392B', fontWeight: 500 }}>{t('profile.signOut')}</span>
         </div>
 
         <div className="press-scale" onClick={() => setDialog('delete')} style={{
@@ -321,13 +328,39 @@ export function ProfileScreen({ refreshKey = 0 }: { refreshKey?: number }) {
           justifyContent: 'center', gap: 8, cursor: 'pointer',
         }}>
           <Trash2 size={15} strokeWidth={1.8} color="rgba(192,57,43,0.5)" />
-          <span style={{ fontSize: 13, color: 'rgba(192,57,43,0.5)', fontWeight: 500 }}>Delete Account</span>
+          <span style={{ fontSize: 13, color: 'rgba(192,57,43,0.5)', fontWeight: 500 }}>{t('profile.deleteAccount')}</span>
         </div>
 
         <div style={{ textAlign: 'center', padding: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>
-          MilaKya v1.0 · Bharat ke liye 🇮🇳
+          {t('profile.footer')}
         </div>
       </div>
+
+      <BottomSheet isOpen={langSheet} onClose={() => setLangSheet(false)}>
+        <div style={{ padding: '8px 24px 32px' }}>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', margin: '0 0 20px' }}>
+            {t('lang.sheet.title')}
+          </h2>
+          {([
+            ['hinglish', t('lang.hinglish'), t('lang.hinglish.sub')], 
+            ['en', t('lang.en'), t('lang.en.sub')], 
+            ['hi', t('lang.hi'), t('lang.hi.sub')]
+          ] as [Lang, string, string][]).map(([val, label, sub]) => (
+            <button key={val} onClick={() => { setLang(val); setLangSheet(false) }} style={{
+              width: '100%', padding: '13px 16px', borderRadius: 14, border: 'none',
+              background: lang === val ? 'var(--primary-pale)' : 'var(--bg-elevated)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: 8, cursor: 'pointer',
+            }}>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: lang === val ? 'var(--primary)' : 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>{label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{sub}</div>
+              </div>
+              {lang === val && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)' }} />}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   )
 }

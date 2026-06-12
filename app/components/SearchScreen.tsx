@@ -11,13 +11,15 @@ import { semanticSearch } from '@/lib/gemini'
 import type { ItemWithLocation } from '@/lib/types'
 import { ItemDetailSheet } from '@/components/ui/ItemDetailSheet'
 import { useAck } from '@/components/ui/ActionConfirmation'
+import { useLanguage } from '@/lib/useLanguage'
+import type { DictKey } from '@/lib/i18n'
 
-const RECENT_CHIPS: { label: string; Icon: React.FC<LucideProps>; color: 'primary' | 'gold' | 'sage' }[] = [
-  { label: 'Passport',  Icon: FileText, color: 'primary' },
-  { label: 'Jewellery', Icon: Gem,      color: 'gold'    },
-  { label: 'Medicine',  Icon: Pill,     color: 'sage'    },
-  { label: 'Documents', Icon: Folder,   color: 'primary' },
-  { label: 'Clothes',   Icon: Shirt,    color: 'gold'    },
+const RECENT_CHIPS: { labelKey: DictKey; Icon: React.FC<LucideProps>; color: 'primary' | 'gold' | 'sage' }[] = [
+  { labelKey: 'search.chip.passport',  Icon: FileText, color: 'primary' },
+  { labelKey: 'search.chip.jewellery', Icon: Gem,      color: 'gold'    },
+  { labelKey: 'search.chip.medicine',  Icon: Pill,     color: 'sage'    },
+  { labelKey: 'search.chip.documents', Icon: Folder,   color: 'primary' },
+  { labelKey: 'search.chip.clothes',   Icon: Shirt,    color: 'gold'    },
 ]
 const chipColors = {
   primary: { bg: 'var(--primary-pale)', text: 'var(--primary)' },
@@ -41,6 +43,7 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
   const [bulkLoading, setBulkLoading] = useState(false)
 
   const { trigger } = useAck()
+  const { t } = useLanguage()
 
   async function handleToggleImportant(id: string) {
     const item = items.find((i) => i.id === id)
@@ -138,7 +141,7 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
     const text = selected.map((i) => `📦 ${i.name} — ${i.home_id ?? ''}${i.room_id ? ' › ' + i.room_id : ''}`).join('\n')
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'MilaKya — Meri cheezein', text })
+        await navigator.share({ title: t('share.title'), text })
       } else {
         await navigator.clipboard.writeText(text)
       }
@@ -154,14 +157,14 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
 
   return (
     <>
-      <LargeTitle title="Dhoondo" subtitle="Koi bhi cheez, kisi bhi ghar mein" />
+      <LargeTitle title={t('search.title')} subtitle={t('search.subtitle')} />
 
       <div data-walkthrough="search-top-section">
         <div style={{ margin: '0 16px 14px', position: 'relative' }}>
           <Search size={16} strokeWidth={2} color="var(--text-tertiary)"
             style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Passport, blue bag, Diwali suit..."
+            placeholder={t('search.placeholder')}
             style={{ width: '100%', padding: '10px 36px 10px 38px', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif', outline: 'none', boxShadow: '0 1px 4px rgba(42,27,16,0.05)' }}
           />
           {query.length > 0 && (
@@ -175,13 +178,14 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
         {!query && (
           <>
             <div style={{ padding: '0 20px', marginBottom: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Jaldi dhoondo</span>
+              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>{t('search.quickLabel')}</span>
             </div>
             <div style={{ padding: '0 16px', display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              {RECENT_CHIPS.map(({ label, Icon, color }) => {
+              {RECENT_CHIPS.map(({ labelKey, Icon, color }) => {
                 const c = chipColors[color]
+                const label = t(labelKey)
                 return (
-                  <button key={label} onClick={() => setQuery(label)}
+                  <button key={labelKey} onClick={() => setQuery(label)}
                     style={{ background: c.bg, color: c.text, borderRadius: 100, padding: '5px 12px 5px 9px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Icon size={12} strokeWidth={2} color={c.text} />{label}
                   </button>
@@ -195,30 +199,30 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
       {/* Results header */}
       <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-          {query ? `"${query}" ke results` : 'Sabhi cheezein'}
+          {query ? `"${query}" ${t('search.results')}` : t('search.allItems')}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {semanticLoading && (
             <span style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Sparkles size={11} color="var(--primary)" style={{ animation: 'spin 1.5s linear infinite' }} /> AI...
+              <Sparkles size={11} color="var(--primary)" style={{ animation: 'spin 1.5s linear infinite' }} /> {t('search.aiLoading')}
             </span>
           )}
-          {!semanticLoading && <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{items.length} items</span>}
+          {!semanticLoading && <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t('common.items', items.length)}</span>}
           {items.length > 0 && !selectMode && (
             <button onClick={() => enterSelectMode()}
               style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-              <CheckSquare size={13} strokeWidth={1.8} /> Select
+              <CheckSquare size={13} strokeWidth={1.8} /> {t('search.select')}
             </button>
           )}
           {selectMode && (
             <>
               <button onClick={toggleSelectAll}
                 style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-                {selectedIds.size === items.length ? <><CheckSquare size={13} strokeWidth={2} /> Sab hata</> : <><Square size={13} strokeWidth={2} /> Sab chuno</>}
+                {selectedIds.size === items.length ? <><CheckSquare size={13} strokeWidth={2} /> {t('search.deselectAll')}</> : <><Square size={13} strokeWidth={2} /> {t('search.selectAll')}</>}
               </button>
               <button onClick={exitSelectMode}
                 style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <X size={13} strokeWidth={2.2} /> Cancel
+                <X size={13} strokeWidth={2.2} /> {t('common.cancel')}
               </button>
             </>
           )}
@@ -233,10 +237,10 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>
             <PackageSearch size={40} strokeWidth={1.3} color="var(--text-tertiary)" style={{ margin: '0 auto 12px', display: 'block', opacity: 0.35 }} />
             <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>
-              {query ? 'Nahi mila!' : 'Abhi koi cheez nahi hai'}
+              {query ? t('search.emptyQuery') : t('search.emptyAll')}
             </div>
             <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
-              {query ? 'Kya aap kisi aur ghar mein rakhna bhool gaye?' : 'Home screen par + se cheez add karo'}
+              {query ? t('search.emptyQuerySub') : t('search.emptyAllSub')}
             </div>
           </div>
         ) : items.map((item) => {
@@ -267,7 +271,7 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
           {/* Delete */}
           <button onClick={handleBulkDelete} disabled={bulkLoading}
             style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#C0392B', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit, sans-serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(192,57,43,0.3)', opacity: bulkLoading ? 0.6 : 1 }}>
-            <Trash2 size={15} strokeWidth={2} /> {selectedIds.size} delete karo
+            <Trash2 size={15} strokeWidth={2} /> {t('search.deleteBtn', selectedIds.size)}
           </button>
           {/* Star */}
           <button onClick={handleBulkImportant} disabled={bulkLoading}

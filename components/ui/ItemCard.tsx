@@ -5,6 +5,7 @@ import { getHomeIcon } from '@/lib/homeIcons'
 import { CATEGORY_ICONS } from '@/lib/types'
 import type { ItemWithLocation } from '@/lib/types'
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/useLanguage'
 
 // Maps stored iconKey → Lucide component (item icons from QuickAddSheet)
 const ITEM_ICON_MAP: Record<string, string> = {
@@ -31,6 +32,7 @@ interface ItemCardProps {
 export function LocationBadge({ item }: { item: ItemWithLocation }) {
   const home = item.homes
   const room = item.rooms
+  const { t } = useLanguage()
 
   return (
     <span style={{
@@ -46,13 +48,14 @@ export function LocationBadge({ item }: { item: ItemWithLocation }) {
       })()}
       {home ? home.name : ''}
       {room ? ` › ${room.name}` : ''}
-      {!home && 'Location unknown'}
+      {!home && t('itemCard.unknownLoc')}
     </span>
   )
 }
 
 export function ItemCard({ item, onToggleImportant }: ItemCardProps) {
   const [isImportant, setIsImportant] = useState(item.is_important)
+  const { t } = useLanguage()
 
   // Sync when parent item changes (e.g. after re-fetch)
   useEffect(() => {
@@ -72,9 +75,9 @@ export function ItemCard({ item, onToggleImportant }: ItemCardProps) {
     const room = item.rooms
     const path = home && room
       ? `${home.name} → ${room.name}`
-      : home ? home.name : 'Unknown location'
+      : home ? home.name : t('itemCard.unknownLoc')
 
-    const msg = `📍 *${item.name}* rakha hai:\n${path}\n\nMilaKya se bheja`
+    const msg = t('itemCard.whatsapp.msg', { name: item.name, location: path })
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
@@ -114,14 +117,14 @@ export function ItemCard({ item, onToggleImportant }: ItemCardProps) {
         <button
           onClick={handleWhatsApp}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
-          aria-label="Share on WhatsApp"
+          aria-label={t('itemCard.shareWhatsapp')}
         >
           <Share2 size={15} strokeWidth={1.8} color="var(--text-tertiary)" />
         </button>
         <button
           onClick={handleStarClick}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
-          aria-label={isImportant ? 'Remove important' : 'Mark important'}
+          aria-label={isImportant ? t('itemCard.removeImp') : t('itemCard.markImp')}
         >
           <Star
             size={16} strokeWidth={1.8}
