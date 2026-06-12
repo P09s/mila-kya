@@ -138,7 +138,12 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
     function tryMeasure() {
       const found = measure()
       if (found) {
-        // Element exists, show the spotlight!
+        // Scroll element into view first, then show spotlight
+        const step_def = STEPS[step]
+        const el = containerRef.current?.querySelector(`[data-walkthrough="${step_def.target}"]`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }
         setTimeout(() => setVisible(true), 40)
       } else if (attempts < 20) {
         // Element is missing (e.g. still fetching data). Keep trying for up to 4 seconds.
@@ -188,10 +193,28 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
   // Tab bar height is 72px
   const TAB_H_PCT = (72 / cH) * 100
 
-  // Tooltip positioning
+  // Tooltip positioning with smart flipping
   const TOOLTIP_GAP_PX = 10
-  const tooltipTopPx    = rect && cur.tooltipSide === 'bottom' ? rect.top + rect.height + TOOLTIP_GAP_PX : undefined
-  const tooltipBottomPx = rect && cur.tooltipSide === 'top'   ? cH - rect.top + TOOLTIP_GAP_PX          : undefined
+  const TOOLTIP_EST_HEIGHT = 200  // estimated tooltip card height in px
+  const TAB_BAR_PX = 72
+
+  // For 'bottom' tooltips — if not enough space below, flip to top
+  const spaceBelow = rect ? cH - TAB_BAR_PX - (rect.top + rect.height) : 0
+  const spaceAbove = rect ? rect.top : 0
+
+  const shouldFlip = rect && cur.tooltipSide === 'bottom' && spaceBelow < TOOLTIP_EST_HEIGHT + 20 && spaceAbove > spaceBelow
+
+  const tooltipTopPx = rect && !shouldFlip && cur.tooltipSide === 'bottom'
+    ? Math.min(rect.top + rect.height + TOOLTIP_GAP_PX, cH - TAB_BAR_PX - TOOLTIP_EST_HEIGHT - 8)
+    : rect && shouldFlip
+    ? undefined
+    : undefined
+
+  const tooltipBottomPx = rect && (cur.tooltipSide === 'top' || shouldFlip)
+    ? (cur.tooltipSide === 'top' 
+        ? cH - rect.top + TOOLTIP_GAP_PX 
+        : cH - rect.top + TOOLTIP_GAP_PX)
+    : undefined
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
@@ -255,9 +278,9 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
             position: 'absolute',
             left: '50%', transform: 'translateX(-50%)',
             width: 0, height: 0,
-            ...(cur.tooltipSide === 'bottom'
-              ? { top: -7,  borderBottom: '7px solid var(--bg-surface)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
-              : { bottom: -7, borderTop: '7px solid var(--bg-surface)',   borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
+            ...(shouldFlip
+              ? { bottom: -7, borderTop: '7px solid var(--bg-surface)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
+              : { top: -7, borderBottom: '7px solid var(--bg-surface)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
             ),
           }} />
 

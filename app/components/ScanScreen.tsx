@@ -409,7 +409,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         title={`${photoResults.length} cheez mili 🎉`}
         height="80"
       >
-        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: selectedPhotoIdxs.size > 0 ? 160 : 24 }}>
+        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 24, flex: 1, overflowY: 'auto' }}>
           {photoResults.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button onClick={selectAllPhoto} style={selectAllBtn}>
@@ -445,7 +445,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         </div>
 
         {selectedPhotoIdxs.size > 0 && (
-          <div style={{ position: 'sticky', bottom: 0 }}>
+          <div style={{ flexShrink: 0 }}>
             {bulkLocStep === 'photo'
               ? <LocationPicker count={selectedPhotoIdxs.size} type="photo" onConfirm={bulkAddPhoto} />
               : (
@@ -467,7 +467,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         title={`${diaryResults.length} items mili 📒`}
         height="80"
       >
-        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: selectedDiaryIdxs.size > 0 ? 160 : 24 }}>
+        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 24, flex: 1, overflowY: 'auto' }}>
           {diaryResults.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button onClick={selectAllDiary} style={selectAllBtn}>
@@ -501,7 +501,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         </div>
 
         {selectedDiaryIdxs.size > 0 && (
-          <div style={{ position: 'sticky', bottom: 0 }}>
+          <div style={{ flexShrink: 0 }}>
             {bulkLocStep === 'diary'
               ? <LocationPicker count={selectedDiaryIdxs.size} type="diary" onConfirm={bulkAddDiary} />
               : (

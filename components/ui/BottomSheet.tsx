@@ -75,7 +75,9 @@ export function BottomSheet({
           zIndex: 999,
           maxHeight: height === 'auto' ? '92dvh' : heightStyle,
           height: height !== 'auto' ? heightStyle : undefined,
-          overflowY: 'auto',
+          overflowY: 'hidden',
+          display: 'flex',        
+          flexDirection: 'column',
           transform: isOpen ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform 320ms cubic-bezier(0.34,1.56,0.64,1)',
           boxShadow: '0 -8px 40px rgba(42,27,16,0.16)',
@@ -110,7 +112,9 @@ export function BottomSheet({
           </div>
         )}
 
-        <div>{children}</div>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
       </div>
     </>,
     document.body
