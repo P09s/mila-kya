@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { X } from 'lucide-react'
 
 interface BottomSheetProps {
   isOpen: boolean
   onClose: () => void
   title?: string
   children: React.ReactNode
+  /** Pinned to the bottom of the sheet, outside the scroll area */
+  footer?: React.ReactNode
   height?: 'auto' | 'full' | '60' | '70' | '80' | '85'
 }
 
@@ -16,6 +19,7 @@ export function BottomSheet({
   onClose,
   title,
   children,
+  footer,
   height = 'auto',
 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -76,7 +80,7 @@ export function BottomSheet({
           maxHeight: height === 'auto' ? '92dvh' : heightStyle,
           height: height !== 'auto' ? heightStyle : undefined,
           overflowY: 'hidden',
-          display: 'flex',        
+          display: 'flex',
           flexDirection: 'column',
           transform: isOpen ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform 320ms cubic-bezier(0.34,1.56,0.64,1)',
@@ -85,36 +89,48 @@ export function BottomSheet({
         }}
       >
         {/* Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(42,27,16,0.12)' }} />
         </div>
 
         {/* Header */}
         {title && (
           <div style={{
+            flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '8px 20px 16px',
             borderBottom: '1px solid var(--border-soft)',
           }}>
-            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{
+              fontFamily: 'Outfit, sans-serif', fontSize: 17, fontWeight: 700,
+              color: 'var(--text-primary)',
+            }}>
               {title}
             </span>
-            <button onClick={onClose}
+            <button
+              onClick={onClose}
               style={{
                 width: 28, height: 28, borderRadius: '50%',
                 background: 'var(--bg-elevated)', border: 'none', cursor: 'pointer',
-                fontSize: 14, color: 'var(--text-tertiary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              ✕
+              <X size={14} strokeWidth={2.2} color="var(--text-tertiary)" />
             </button>
           </div>
         )}
 
+        {/* Scrollable content — grows to fill available space */}
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {children}
         </div>
+
+        {/* Pinned footer — never scrolls away */}
+        {footer && (
+          <div style={{ flexShrink: 0 }}>
+            {footer}
+          </div>
+        )}
       </div>
     </>,
     document.body

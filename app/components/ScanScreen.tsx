@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import {
   Camera, BookOpen, Loader2, AlertCircle, Plus,
-  CheckSquare, Square, Info, X as XIcon, Check,
+  CheckSquare, Square, Info, X as XIcon, Check, MapPin,
 } from 'lucide-react'
 import { LargeTitle } from '@/components/ui/LargeTitle'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -75,15 +75,6 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     setBulkRoomId('')
   }
 
-  function matchRoom(hint?: string): string | undefined {
-    if (!hint || !activeHomeRooms.length) return undefined
-    const h = hint.toLowerCase()
-    return activeHomeRooms.find(
-      (r) => r.name.toLowerCase().includes(h) || h.includes(r.name.toLowerCase())
-    )?.id
-  }
-
-  // Original function for Diary
   function toBase64(file: File): Promise<string> {
     return new Promise((res, rej) => {
       const reader = new FileReader()
@@ -93,14 +84,13 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     })
   }
 
-  // New compression function for Photo
   function compressAndBase64(file: File): Promise<{ base64: string; mimeType: string }> {
     return new Promise((res, rej) => {
       const img = new Image()
       const url = URL.createObjectURL(file)
       img.onload = () => {
         URL.revokeObjectURL(url)
-        const MAX = 1024  // max width/height in px
+        const MAX = 1024
         let { width, height } = img
         if (width > MAX || height > MAX) {
           if (width > height) { height = Math.round(height * MAX / width); width = MAX }
@@ -122,8 +112,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     if (!file) return
     setScanError(null); setPhotoScanning(true)
     try {
-      const { base64, mimeType } = await compressAndBase64(file) 
-      const items = await detectItemsFromPhoto(base64, mimeType) 
+      const { base64, mimeType } = await compressAndBase64(file)
+      const items = await detectItemsFromPhoto(base64, mimeType)
       setPhotoResults(items)
       setSelectedPhotoIdxs(new Set(items.map((_, i) => i)))
       setPhotoSheetOpen(true)
@@ -159,10 +149,18 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     } finally { setDiaryScanning(false); e.target.value = '' }
   }
 
-  function togglePhoto(i: number) { setSelectedPhotoIdxs((prev) => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n }) }
-  function toggleDiary(i: number) { setSelectedDiaryIdxs((prev) => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n }) }
-  function selectAllPhoto() { setSelectedPhotoIdxs(selectedPhotoIdxs.size === photoResults.length ? new Set() : new Set(photoResults.map((_, i) => i))) }
-  function selectAllDiary() { setSelectedDiaryIdxs(selectedDiaryIdxs.size === diaryResults.length ? new Set() : new Set(diaryResults.map((_, i) => i))) }
+  function togglePhoto(i: number) {
+    setSelectedPhotoIdxs((prev) => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+  }
+  function toggleDiary(i: number) {
+    setSelectedDiaryIdxs((prev) => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+  }
+  function selectAllPhoto() {
+    setSelectedPhotoIdxs(selectedPhotoIdxs.size === photoResults.length ? new Set() : new Set(photoResults.map((_, i) => i)))
+  }
+  function selectAllDiary() {
+    setSelectedDiaryIdxs(selectedDiaryIdxs.size === diaryResults.length ? new Set() : new Set(diaryResults.map((_, i) => i)))
+  }
 
   async function bulkAddPhoto() {
     if (selectedPhotoIdxs.size === 0 || bulkAdding) return
@@ -196,14 +194,12 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     if (!targetHomeId) return
     setBulkAdding(true)
     try {
-      // Collect unique room hints from selected items
       const hints = Array.from(new Set(
         Array.from(selectedDiaryIdxs)
           .map((i) => diaryResults[i].room_hint)
           .filter(Boolean) as string[]
       ))
 
-      // Build roomMap from existing rooms, then auto-create missing ones
       const roomMap: Record<string, string> = Object.fromEntries(
         bulkRooms.map((r) => [r.name.toLowerCase(), r.id])
       )
@@ -217,7 +213,6 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         if (matched) {
           roomMap[hint.toLowerCase()] = matched.id
         } else {
-          // Auto-create the room
           const newRoom = await createRoom(targetHomeId, hint)
           roomMap[hint.toLowerCase()] = newRoom.id
           setBulkRooms((prev) => [...prev, newRoom])
@@ -249,16 +244,33 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     } finally { setBulkAdding(false) }
   }
 
-  function openSinglePhoto(item: DetectedItem) { setSelectedItem(item); setPhotoSheetOpen(false); setTimeout(() => setQuickAddOpen(true), 350) }
-  function openSingleDiary(item: DiaryItem) { setSelectedItem({ name: item.name, category: 'Other', confidence: 1, emoji: '📦' }); setDiarySheetOpen(false); setTimeout(() => setQuickAddOpen(true), 350) }
+  function openSinglePhoto(item: DetectedItem) {
+    setSelectedItem(item); setPhotoSheetOpen(false); setTimeout(() => setQuickAddOpen(true), 350)
+  }
+  function openSingleDiary(item: DiaryItem) {
+    setSelectedItem({ name: item.name, category: 'Other', confidence: 1, emoji: '📦' })
+    setDiarySheetOpen(false); setTimeout(() => setQuickAddOpen(true), 350)
+  }
 
-  function LocationPicker({ onConfirm, count }: { onConfirm: () => void; count: number; type: 'photo' | 'diary' }) {
+  // ── Shared LocationPicker — renders as sheet footer ────────────────────────
+  function LocationPicker({ onConfirm, count }: { onConfirm: () => void; count: number }) {
     return (
-      <div style={{ padding: '14px 20px 20px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-soft)' }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>📍 Kahan rakhein? ({count} items)</span>
-          <button onClick={resetBulkLocation} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <XIcon size={14} color="var(--text-tertiary)" strokeWidth={2} />
+      <div style={{
+        padding: '14px 20px 20px',
+        background: 'var(--bg-surface)',
+        borderTop: '1px solid var(--border-soft)',
+      }}>
+        {/* Row: label + close */}
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)',
+          marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <MapPin size={12} strokeWidth={2.2} color="var(--primary)" />
+            <span>Kahan rakhein? ({count} items)</span>
+          </div>
+          <button onClick={resetBulkLocation} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+            <XIcon size={14} strokeWidth={2} color="var(--text-tertiary)" />
           </button>
         </div>
 
@@ -283,7 +295,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
           })}
         </div>
 
-        {/* Room dropdown — only if rooms exist */}
+        {/* Room dropdown */}
         {bulkRooms.length > 0 && (
           <select
             value={bulkRoomId}
@@ -318,11 +330,25 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     )
   }
 
+  // ── Bulk bar (before location is chosen) ──────────────────────────────────
+  function BulkBar({ count, type }: { count: number; type: 'photo' | 'diary' }) {
+    return (
+      <div style={{ padding: '10px 20px 20px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-soft)' }}>
+        <button
+          onClick={() => setBulkLocStep(type)}
+          style={bulkBtnStyle}
+        >
+          <MapPin size={15} strokeWidth={2.2} color="#FAF6F0" />
+          {count} cheez add karo
+        </button>
+      </div>
+    )
+  }
+
   return (
     <>
       <LargeTitle title="Scan karo" subtitle="Photo ya diary — AI samjhega" />
 
-      {/* Changed: Removed capture="environment" from photoInputRef */}
       <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
       <input ref={diaryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleDiaryFile} />
 
@@ -356,9 +382,16 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Ek saath kai cheezein detect karega</div>
             </div>
           </div>
-          <button onClick={() => { if (navigator.vibrate) navigator.vibrate(10); photoInputRef.current?.click() }} disabled={photoScanning} className="press-scale"
-            style={{ marginTop: 16, width: '100%', background: photoScanning ? 'var(--bg-elevated)' : 'var(--primary)', color: photoScanning ? 'var(--text-tertiary)' : '#FAF6F0', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, border: 'none', cursor: photoScanning ? 'not-allowed' : 'pointer', fontFamily: 'Outfit, sans-serif', boxShadow: photoScanning ? 'none' : '0 4px 16px rgba(200,96,58,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 200ms' }}>
-            {photoScanning ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Scan ho raha hai...</> : <><Camera size={16} strokeWidth={2} /> Camera kholein</>}
+          <button
+            onClick={() => { if (navigator.vibrate) navigator.vibrate(10); photoInputRef.current?.click() }}
+            disabled={photoScanning}
+            className="press-scale"
+            style={{ marginTop: 16, width: '100%', background: photoScanning ? 'var(--bg-elevated)' : 'var(--primary)', color: photoScanning ? 'var(--text-tertiary)' : '#FAF6F0', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, border: 'none', cursor: photoScanning ? 'not-allowed' : 'pointer', fontFamily: 'Outfit, sans-serif', boxShadow: photoScanning ? 'none' : '0 4px 16px rgba(200,96,58,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 200ms' }}
+          >
+            {photoScanning
+              ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Scan ho raha hai...</>
+              : <><Camera size={16} strokeWidth={2} /> Camera kholein</>
+            }
           </button>
         </div>
 
@@ -366,7 +399,10 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         <div data-walkthrough="scan-diary-card" style={{ background: 'var(--bg-surface)', borderRadius: 20, border: '1px solid var(--border-soft)', padding: '20px', boxShadow: '0 1px 4px rgba(42,27,16,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, flexShrink: 0, background: 'var(--gold-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {diaryScanning ? <Loader2 size={24} strokeWidth={1.8} color="var(--gold)" style={{ animation: 'spin 1s linear infinite' }} /> : <BookOpen size={24} strokeWidth={1.6} color="var(--gold)" />}
+              {diaryScanning
+                ? <Loader2 size={24} strokeWidth={1.8} color="var(--gold)" style={{ animation: 'spin 1s linear infinite' }} />
+                : <BookOpen size={24} strokeWidth={1.6} color="var(--gold)" />
+              }
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 3 }}>Diary / List scan karo</div>
@@ -380,19 +416,29 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                 <span style={{ fontWeight: 600 }}>Best results:</span> Achhi roshni, no blur, poora page frame mein. Table format (Room | Almirah | Item) mein ho toh AI jagah khud assign karega.
               </div>
               <button onClick={() => setShowDiaryTip(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-                <XIcon size={12} color="var(--text-tertiary)" strokeWidth={2.2} />
+                <XIcon size={12} strokeWidth={2.2} color="var(--text-tertiary)" />
               </button>
             </div>
           )}
-          <button onClick={() => diaryInputRef.current?.click()} disabled={diaryScanning} className="press-scale"
-            style={{ marginTop: 14, width: '100%', background: 'var(--gold-pale)', color: diaryScanning ? 'var(--text-tertiary)' : 'var(--gold)', borderRadius: 14, padding: '12px', fontSize: 14, fontWeight: 600, border: '1px solid rgba(196,146,58,0.25)', cursor: diaryScanning ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 200ms' }}>
-            {diaryScanning ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Scan ho raha hai...</> : <><BookOpen size={15} strokeWidth={2} /> Diary Scan karo</>}
+          <button
+            onClick={() => diaryInputRef.current?.click()}
+            disabled={diaryScanning}
+            className="press-scale"
+            style={{ marginTop: 14, width: '100%', background: 'var(--gold-pale)', color: diaryScanning ? 'var(--text-tertiary)' : 'var(--gold)', borderRadius: 14, padding: '12px', fontSize: 14, fontWeight: 600, border: '1px solid rgba(196,146,58,0.25)', cursor: diaryScanning ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 200ms' }}
+          >
+            {diaryScanning
+              ? <><Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} /> Scan ho raha hai...</>
+              : <><BookOpen size={15} strokeWidth={2} /> Diary Scan karo</>
+            }
           </button>
         </div>
 
         {/* Manual quick add */}
-        <div data-walkthrough="scan-quick-add" onClick={() => { setSelectedItem(null); setQuickAddOpen(true) }}
-          style={{ background: 'var(--bg-surface)', borderRadius: 14, border: '1.5px dashed rgba(42,27,16,0.12)', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 12, transition: 'opacity 150ms' }}>
+        <div
+          data-walkthrough="scan-quick-add"
+          onClick={() => { setSelectedItem(null); setQuickAddOpen(true) }}
+          style={{ background: 'var(--bg-surface)', borderRadius: 14, border: '1.5px dashed rgba(42,27,16,0.12)', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 12, transition: 'opacity 150ms' }}
+        >
           <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Ya manually type karo</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>
             <Plus size={13} strokeWidth={2.5} /> Quick Add
@@ -402,21 +448,33 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         <div style={{ height: 8 }} />
       </div>
 
-      {/* Photo results sheet */}
+      {/* ── Photo results sheet ── */}
       <BottomSheet
         isOpen={photoSheetOpen}
         onClose={() => { setPhotoSheetOpen(false); resetBulkLocation() }}
         title={`${photoResults.length} cheez mili 🎉`}
         height="80"
+        footer={
+          selectedPhotoIdxs.size > 0
+            ? bulkLocStep === 'photo'
+              ? <LocationPicker count={selectedPhotoIdxs.size} onConfirm={bulkAddPhoto} />
+              : <BulkBar count={selectedPhotoIdxs.size} type="photo" />
+            : undefined
+        }
       >
-        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 24, flex: 1, overflowY: 'auto' }}>
+        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 24 }}>
           {photoResults.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button onClick={selectAllPhoto} style={selectAllBtn}>
-                {selectedPhotoIdxs.size === photoResults.length ? <CheckSquare size={15} color="var(--primary)" strokeWidth={2} /> : <Square size={15} color="var(--text-tertiary)" strokeWidth={1.8} />}
+                {selectedPhotoIdxs.size === photoResults.length
+                  ? <CheckSquare size={15} color="var(--primary)" strokeWidth={2} />
+                  : <Square size={15} color="var(--text-tertiary)" strokeWidth={1.8} />
+                }
                 <span>{selectedPhotoIdxs.size === photoResults.length ? 'Deselect all' : 'Select all'}</span>
               </button>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{selectedPhotoIdxs.size > 0 ? `${selectedPhotoIdxs.size} selected` : 'Tap to select'}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                {selectedPhotoIdxs.size > 0 ? `${selectedPhotoIdxs.size} selected` : 'Tap to select'}
+              </span>
             </div>
           )}
           {photoResults.length === 0
@@ -435,46 +493,48 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {checked ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} /> : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />}
-                    <button onClick={(e) => { e.stopPropagation(); openSinglePhoto(item) }} style={singleAddBtn} title="Add with full details"><Plus size={14} strokeWidth={2.2} color="var(--primary)" /></button>
+                    {checked
+                      ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} />
+                      : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />
+                    }
+                    <button onClick={(e) => { e.stopPropagation(); openSinglePhoto(item) }} style={singleAddBtn} title="Add with full details">
+                      <Plus size={14} strokeWidth={2.2} color="var(--primary)" />
+                    </button>
                   </div>
                 </div>
               )
             })
           }
         </div>
-
-        {selectedPhotoIdxs.size > 0 && (
-          <div style={{ flexShrink: 0 }}>
-            {bulkLocStep === 'photo'
-              ? <LocationPicker count={selectedPhotoIdxs.size} type="photo" onConfirm={bulkAddPhoto} />
-              : (
-                <div style={bulkBarStyle}>
-                  <button onClick={() => setBulkLocStep('photo')} style={bulkBtnStyle}>
-                    <CheckSquare size={15} strokeWidth={2.2} /> {selectedPhotoIdxs.size} cheez add karo
-                  </button>
-                </div>
-              )
-            }
-          </div>
-        )}
       </BottomSheet>
 
-      {/* Diary results sheet */}
+      {/* ── Diary results sheet ── */}
       <BottomSheet
         isOpen={diarySheetOpen}
         onClose={() => { setDiarySheetOpen(false); resetBulkLocation() }}
         title={`${diaryResults.length} items mili 📒`}
         height="80"
+        footer={
+          selectedDiaryIdxs.size > 0
+            ? bulkLocStep === 'diary'
+              ? <LocationPicker count={selectedDiaryIdxs.size} onConfirm={bulkAddDiary} />
+              : <BulkBar count={selectedDiaryIdxs.size} type="diary" />
+            : undefined
+        }
       >
-        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 24, flex: 1, overflowY: 'auto' }}>
+        <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 24 }}>
           {diaryResults.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button onClick={selectAllDiary} style={selectAllBtn}>
-                {selectedDiaryIdxs.size === diaryResults.length ? <CheckSquare size={15} color="var(--primary)" strokeWidth={2} /> : <Square size={15} color="var(--text-tertiary)" strokeWidth={1.8} />}
+                {selectedDiaryIdxs.size === diaryResults.length
+                  ? <CheckSquare size={15} color="var(--primary)" strokeWidth={2} />
+                  : <Square size={15} color="var(--text-tertiary)" strokeWidth={1.8} />
+                }
                 <span>{selectedDiaryIdxs.size === diaryResults.length ? 'Deselect all' : 'Select all'}</span>
               </button>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{selectedDiaryIdxs.size > 0 ? `${selectedDiaryIdxs.size} selected` : 'Tap to select'}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                {selectedDiaryIdxs.size > 0 ? `${selectedDiaryIdxs.size} selected` : 'Tap to select'}
+              </span>
             </div>
           )}
           {diaryResults.length === 0
@@ -486,34 +546,28 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: checked ? 'var(--primary-pale)' : 'var(--bg-elevated)', borderRadius: 14, padding: '12px 14px', cursor: 'pointer', border: checked ? '1.5px solid var(--primary)' : '1px solid var(--border-soft)', transition: 'background 150ms, border-color 150ms' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</div>
-                    {(item.room_hint || item.sub_location) && <div style={{ fontSize: 11, color: 'var(--primary)', marginTop: 2 }}>📍 {[item.room_hint, item.sub_location].filter(Boolean).join(' › ')}</div>}
+                    {(item.room_hint || item.sub_location) && (
+                      <div style={{ fontSize: 11, color: 'var(--primary)', marginTop: 2 }}>
+                        📍 {[item.room_hint, item.sub_location].filter(Boolean).join(' › ')}
+                      </div>
+                    )}
                     {item.quantity && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Qty: {item.quantity}</div>}
                     {item.notes && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.notes}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {checked ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} /> : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />}
-                    <button onClick={(e) => { e.stopPropagation(); openSingleDiary(item) }} style={singleAddBtn} title="Add with full details"><Plus size={14} strokeWidth={2.2} color="var(--primary)" /></button>
+                    {checked
+                      ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} />
+                      : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />
+                    }
+                    <button onClick={(e) => { e.stopPropagation(); openSingleDiary(item) }} style={singleAddBtn} title="Add with full details">
+                      <Plus size={14} strokeWidth={2.2} color="var(--primary)" />
+                    </button>
                   </div>
                 </div>
               )
             })
           }
         </div>
-
-        {selectedDiaryIdxs.size > 0 && (
-          <div style={{ flexShrink: 0 }}>
-            {bulkLocStep === 'diary'
-              ? <LocationPicker count={selectedDiaryIdxs.size} type="diary" onConfirm={bulkAddDiary} />
-              : (
-                <div style={bulkBarStyle}>
-                  <button onClick={() => setBulkLocStep('diary')} style={bulkBtnStyle}>
-                    <CheckSquare size={15} strokeWidth={2.2} /> {selectedDiaryIdxs.size} items add karo
-                  </button>
-                </div>
-              )
-            }
-          </div>
-        )}
       </BottomSheet>
 
       <QuickAddSheet
@@ -528,5 +582,4 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
 
 const selectAllBtn: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }
 const singleAddBtn: React.CSSProperties = { width: 28, height: 28, borderRadius: 8, flexShrink: 0, border: '1px solid var(--border-soft)', background: 'var(--primary-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
-const bulkBarStyle: React.CSSProperties = { padding: '10px 20px 20px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-soft)' }
 const bulkBtnStyle: React.CSSProperties = { width: '100%', padding: '13px', borderRadius: 14, background: 'var(--primary)', color: '#FAF6F0', border: 'none', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit, sans-serif', cursor: 'pointer', boxShadow: '0 4px 16px rgba(200,96,58,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }
