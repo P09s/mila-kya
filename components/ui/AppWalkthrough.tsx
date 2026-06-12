@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Home, Search, Camera, Building2, User, ArrowRight, X, ChevronRight, Sparkles } from 'lucide-react'
+import { ArrowRight, X, ChevronRight, Sparkles } from 'lucide-react'
 
 // Each step declares:
 //   tab       — which tab to switch to
 //   target    — data-walkthrough selector to spotlight
 //   padding   — px padding around the element rect
-//   tooltipSide — where tooltip appears relative to spotlight
+//   tooltipSide — preferred tooltip side (may be flipped if there's no room)
 const STEPS = [
   {
     tab: 3, tabLabel: 'Ghar tab',
@@ -21,7 +21,7 @@ const STEPS = [
     tab: 3, tabLabel: 'Ghar tab',
     target: 'ghar-add-btn',
     padding: 8,
-    tooltipSide: 'bottom' as const, // Placed on bottom to prevent clipping at the top
+    tooltipSide: 'bottom' as const,
     title: 'Naya ghar jodon',
     body: 'PG, Maika, Sasural, Office — jitne chahein add karo. "Yahan jao" se active ghar switch karo.',
   },
@@ -67,7 +67,7 @@ const STEPS = [
   },
   {
     tab: 1, tabLabel: 'Search tab',
-    target: 'search-top-section', // Now responsive and maps to actual element!
+    target: 'search-top-section',
     padding: 12,
     tooltipSide: 'bottom' as const,
     title: 'Kuch bhi dhoondhon',
@@ -75,7 +75,7 @@ const STEPS = [
   },
   {
     tab: 4, tabLabel: 'Profile tab',
-    target: 'profile-top-section', // Now responsive and maps to actual element!
+    target: 'profile-top-section',
     padding: 12,
     tooltipSide: 'bottom' as const,
     title: 'Aapka profile',
@@ -92,41 +92,86 @@ interface AppWalkthroughProps {
   containerRef: React.RefObject<HTMLDivElement | null>
 }
 
+// ── Tooltip estimated height for flip logic ──────────────────────────────────
+const TOOLTIP_ESTIMATED_HEIGHT = 200   // px — conservative estimate
+const TOOLTIP_GAP_PX            = 10   // gap between spotlight edge and tooltip
+const TAB_BAR_H                 = 72   // px — bottom tab bar height
+const TOP_SAFE                  = 8    // px — don't render tooltip above this
+
+// ── Find the nearest scrollable ancestor within the container ─────────────────
+function findScrollParent(el: Element, container: Element): Element | null {
+  let cur: Element | null = el.parentElement
+  while (cur && cur !== container) {
+    const style = window.getComputedStyle(cur)
+    const overflow = style.overflowY
+    if (overflow === 'auto' || overflow === 'scroll') return cur
+    cur = cur.parentElement
+  }
+  return null
+}
+
 export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthroughProps) {
-  const [step, setStep] = useState(0)
+  const [step, setStep]       = useState(0)
   const [visible, setVisible] = useState(false)
-  const [rect, setRect] = useState<Rect | null>(null)
-  
-  const cur = STEPS[step]
+  const [rect, setRect]       = useState<Rect | null>(null)
+  // Resolved tooltip side after flip logic
+  const [resolvedSide, setResolvedSide] = useState<'top' | 'bottom'>('bottom')
+
+  const cur    = STEPS[step]
   const isLast = step === STEPS.length - 1
 
-  // Measure the target element relative to the app container
+  // ── Core measure function ──────────────────────────────────────────────────
+  // Returns true if element was found and measured.
   const measure = useCallback((): boolean => {
     if (!containerRef.current) return false
 
     const containerBox = containerRef.current.getBoundingClientRect()
+    const cH = containerBox.height
     const step_def = STEPS[step]
 
-    if (step_def.target) {
-      const el = containerRef.current.querySelector(`[data-walkthrough="${step_def.target}"]`)
-      if (el) {
-        const elBox = el.getBoundingClientRect()
-        const pad = step_def.padding
-        setRect({
-          top:    elBox.top    - containerBox.top    - pad,
-          left:   elBox.left   - containerBox.left   - pad,
-          width:  elBox.width  + pad * 2,
-          height: elBox.height + pad * 2,
-        })
-        return true // Found it!
-      }
-      return false // Not found yet (probably still loading)
+    if (!step_def.target) return false
+
+    const el = containerRef.current.querySelector(
+      `[data-walkthrough="${step_def.target}"]`
+    )
+    if (!el) return false
+
+    const elBox = el.getBoundingClientRect()
+    const pad   = step_def.padding
+
+    const newRect: Rect = {
+      top:    elBox.top    - containerBox.top    - pad,
+      left:   elBox.left   - containerBox.left   - pad,
+      width:  elBox.width  + pad * 2,
+      height: elBox.height + pad * 2,
     }
 
-    return false
+    // ── Flip logic ────────────────────────────────────────────────────────────
+    // Available space below the spotlight (above the tab bar)
+    const spaceBelow = cH - TAB_BAR_H - (newRect.top + newRect.height)
+    // Available space above the spotlight
+    const spaceAbove = newRect.top - TOP_SAFE
+
+    let side = step_def.tooltipSide as 'top' | 'bottom'
+
+    if (side === 'bottom' && spaceBelow < TOOLTIP_ESTIMATED_HEIGHT + TOOLTIP_GAP_PX) {
+      // Not enough room below → flip to top if there's space
+      if (spaceAbove >= TOOLTIP_ESTIMATED_HEIGHT + TOOLTIP_GAP_PX) {
+        side = 'top'
+      }
+      // If neither side has room, keep preferred and let clamping handle it
+    } else if (side === 'top' && spaceAbove < TOOLTIP_ESTIMATED_HEIGHT + TOOLTIP_GAP_PX) {
+      if (spaceBelow >= TOOLTIP_ESTIMATED_HEIGHT + TOOLTIP_GAP_PX) {
+        side = 'bottom'
+      }
+    }
+
+    setResolvedSide(side)
+    setRect(newRect)
+    return true
   }, [step, containerRef])
 
-  // When step changes: switch tab, wait for render, then measure + show
+  // ── When step changes: tab switch → scroll target into view → measure ───────
   useEffect(() => {
     setVisible(false)
     setRect(null)
@@ -136,29 +181,50 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
     let attempts = 0
 
     function tryMeasure() {
-      const found = measure()
-      if (found) {
-        // Scroll element into view first, then show spotlight
-        const step_def = STEPS[step]
-        const el = containerRef.current?.querySelector(`[data-walkthrough="${step_def.target}"]`)
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-        }
-        setTimeout(() => setVisible(true), 40)
-      } else if (attempts < 20) {
-        // Element is missing (e.g. still fetching data). Keep trying for up to 4 seconds.
-        attempts++
-        pollTimer = setTimeout(tryMeasure, 200)
+      if (!containerRef.current) {
+        if (attempts < 20) { attempts++; pollTimer = setTimeout(tryMeasure, 200) }
+        return
+      }
+
+      const el = containerRef.current.querySelector(
+        `[data-walkthrough="${cur.target}"]`
+      )
+
+      if (!el) {
+        // Element not rendered yet — keep polling
+        if (attempts < 20) { attempts++; pollTimer = setTimeout(tryMeasure, 200) }
+        return
+      }
+
+      // ── Scroll target into view inside its scroll parent ──────────────────
+      const scrollParent = findScrollParent(el, containerRef.current)
+      if (scrollParent) {
+        // Use scrollIntoView on the element itself, which handles nested scroll
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        // Wait for smooth scroll to settle before measuring
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            const found = measure()
+            if (found) setTimeout(() => setVisible(true), 40)
+          })
+        }, 350)
+      } else {
+        // No scroll parent — measure immediately after rAF
+        requestAnimationFrame(() => {
+          const found = measure()
+          if (found) setTimeout(() => setVisible(true), 40)
+        })
       }
     }
 
-    // Wait for initial tab transition (320ms) before first attempt
+    // Wait for tab transition (320 ms) before first attempt
     pollTimer = setTimeout(tryMeasure, 320)
 
     return () => clearTimeout(pollTimer)
-  }, [step, cur.tab, measure, onTabChange])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
-  // Re-measure on resize
+  // ── Re-measure on resize ───────────────────────────────────────────────────
   useEffect(() => {
     const ro = new ResizeObserver(() => measure())
     if (containerRef.current) ro.observe(containerRef.current)
@@ -184,37 +250,33 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
   const cH = containerBox?.height ?? 800
   const cW = containerBox?.width  ?? 390
 
-  // Convert rect to % for SVG
+  // ── SVG percentages for spotlight ─────────────────────────────────────────
   const spTop    = rect ? (rect.top    / cH) * 100 : 0
   const spLeft   = rect ? (rect.left   / cW) * 100 : 0
   const spWidth  = rect ? (rect.width  / cW) * 100 : 0
   const spHeight = rect ? (rect.height / cH) * 100 : 0
 
-  // Tab bar height is 72px
-  const TAB_H_PCT = (72 / cH) * 100
+  const TAB_H_PCT = (TAB_BAR_H / cH) * 100
 
-  // Tooltip positioning with smart flipping
-  const TOOLTIP_GAP_PX = 10
-  const TOOLTIP_EST_HEIGHT = 200  // estimated tooltip card height in px
-  const TAB_BAR_PX = 72
+  // ── Tooltip position (px, clamped) ────────────────────────────────────────
+  let tooltipTopPx: number | undefined
+  let tooltipBottomPx: number | undefined
 
-  // For 'bottom' tooltips — if not enough space below, flip to top
-  const spaceBelow = rect ? cH - TAB_BAR_PX - (rect.top + rect.height) : 0
-  const spaceAbove = rect ? rect.top : 0
-
-  const shouldFlip = rect && cur.tooltipSide === 'bottom' && spaceBelow < TOOLTIP_EST_HEIGHT + 20 && spaceAbove > spaceBelow
-
-  const tooltipTopPx = rect && !shouldFlip && cur.tooltipSide === 'bottom'
-    ? Math.min(rect.top + rect.height + TOOLTIP_GAP_PX, cH - TAB_BAR_PX - TOOLTIP_EST_HEIGHT - 8)
-    : rect && shouldFlip
-    ? undefined
-    : undefined
-
-  const tooltipBottomPx = rect && (cur.tooltipSide === 'top' || shouldFlip)
-    ? (cur.tooltipSide === 'top' 
-        ? cH - rect.top + TOOLTIP_GAP_PX 
-        : cH - rect.top + TOOLTIP_GAP_PX)
-    : undefined
+  if (rect) {
+    if (resolvedSide === 'bottom') {
+      // Anchor below spotlight; clamp so card doesn't go below tab bar
+      const raw = rect.top + rect.height + TOOLTIP_GAP_PX
+      // Max top = cH - TAB_BAR_H - TOOLTIP_ESTIMATED_HEIGHT - 8 (breathing room)
+      tooltipTopPx = Math.min(raw, cH - TAB_BAR_H - TOOLTIP_ESTIMATED_HEIGHT - 8)
+      tooltipTopPx = Math.max(tooltipTopPx, TOP_SAFE)
+    } else {
+      // Anchor above spotlight; expressed as `bottom` from container bottom
+      const raw = cH - rect.top + TOOLTIP_GAP_PX
+      // Max bottom = cH - TOP_SAFE - TOOLTIP_ESTIMATED_HEIGHT
+      tooltipBottomPx = Math.min(raw, cH - TOP_SAFE - TOOLTIP_ESTIMATED_HEIGHT)
+      tooltipBottomPx = Math.max(tooltipBottomPx, TAB_BAR_H + 8)
+    }
+  }
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
@@ -268,7 +330,9 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
           ...(tooltipBottomPx !== undefined ? { bottom: tooltipBottomPx } : {}),
           pointerEvents: 'auto',
           opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0) scale(1)' : `translateY(${cur.tooltipSide === 'bottom' ? '-6px' : '6px'}) scale(0.97)`,
+          transform: visible
+            ? 'translateY(0) scale(1)'
+            : `translateY(${resolvedSide === 'bottom' ? '-6px' : '6px'}) scale(0.97)`,
           transition: 'opacity 180ms ease, transform 180ms ease',
           zIndex: 60,
         }}>
@@ -278,9 +342,9 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
             position: 'absolute',
             left: '50%', transform: 'translateX(-50%)',
             width: 0, height: 0,
-            ...(shouldFlip
-              ? { bottom: -7, borderTop: '7px solid var(--bg-surface)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
-              : { top: -7, borderBottom: '7px solid var(--bg-surface)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
+            ...(resolvedSide === 'bottom'
+              ? { top: -7,  borderBottom: '7px solid var(--bg-surface)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
+              : { bottom: -7, borderTop: '7px solid var(--bg-surface)',   borderLeft: '6px solid transparent', borderRight: '6px solid transparent' }
             ),
           }} />
 
@@ -370,7 +434,7 @@ export function AppWalkthrough({ onDone, onTabChange, containerRef }: AppWalkthr
         </div>
       )}
 
-      {/* ── Tab bar highlight — measured from real tab buttons ── */}
+      {/* ── Tab bar highlight ── */}
       <TabHighlight containerRef={containerRef} activeTab={cur.tab} visible={visible} />
     </div>
   )
