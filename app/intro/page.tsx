@@ -118,7 +118,7 @@ export default function IntroPage() {
         style={{
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          padding: '80px 32px 0',
+          padding: 'clamp(40px, 8dvh, 80px) 32px 0',
           animation: direction === 'in'
             ? 'slideIn 400ms cubic-bezier(0.16, 1, 0.30, 1) both'
             : 'slideOut 300ms cubic-bezier(0.4, 0, 1, 1) both',
@@ -126,12 +126,14 @@ export default function IntroPage() {
       >
         {/* Big emoji blob */}
         <div style={{
-          width: 160, height: 160, borderRadius: 48,
           background: slide.accentPale,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 40, flexShrink: 0,
           boxShadow: `0 24px 64px ${slide.accent}22`,
           position: 'relative',
+          width: 'clamp(110px, 22dvh, 160px)', 
+          height: 'clamp(110px, 22dvh, 160px)', 
+          borderRadius: 'clamp(32px, 6dvh, 48px)',
+          marginBottom: 'clamp(20px, 4dvh, 40px)',
         }}>
           {/* Decorative rings */}
           <div style={{
@@ -152,7 +154,7 @@ export default function IntroPage() {
         {/* Title */}
         <h1 style={{
           fontFamily: 'Outfit, sans-serif',
-          fontSize: 34, fontWeight: 800,
+          fontSize: 'clamp(26px, 5dvh, 34px)', fontWeight: 800,
           color: 'var(--text-primary)',
           letterSpacing: '-0.03em',
           textAlign: 'center',
@@ -164,7 +166,7 @@ export default function IntroPage() {
 
         {/* Subtitle */}
         <p style={{
-          fontSize: 15, lineHeight: 1.65,
+          fontSize: 'clamp(13px, 2.2dvh, 15px)', lineHeight: 1.65,
           color: 'var(--text-secondary)',
           textAlign: 'center',
           whiteSpace: 'pre-line',
@@ -188,7 +190,7 @@ export default function IntroPage() {
 
       {/* Bottom controls */}
       <div style={{
-        padding: '32px 32px 52px',
+        padding: 'clamp(16px, 3dvh, 32px) 32px clamp(28px, 5dvh, 52px)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', gap: 24,
       }}>

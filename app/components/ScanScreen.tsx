@@ -83,6 +83,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     )?.id
   }
 
+  // Original function for Diary
   function toBase64(file: File): Promise<string> {
     return new Promise((res, rej) => {
       const reader = new FileReader()
@@ -92,13 +93,37 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     })
   }
 
+  // New compression function for Photo
+  function compressAndBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+    return new Promise((res, rej) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const MAX = 1024  // max width/height in px
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+          else { width = Math.round(width * MAX / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        const base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1]
+        res({ base64, mimeType: 'image/jpeg' })
+      }
+      img.onerror = rej
+      img.src = url
+    })
+  }
+
   async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setScanError(null); setPhotoScanning(true)
     try {
-      const base64 = await toBase64(file)
-      const items = await detectItemsFromPhoto(base64, file.type)
+      const { base64, mimeType } = await compressAndBase64(file) 
+      const items = await detectItemsFromPhoto(base64, mimeType) 
       setPhotoResults(items)
       setSelectedPhotoIdxs(new Set(items.map((_, i) => i)))
       setPhotoSheetOpen(true)
@@ -297,7 +322,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     <>
       <LargeTitle title="Scan karo" subtitle="Photo ya diary — AI samjhega" />
 
-      <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhotoFile} />
+      {/* Changed: Removed capture="environment" from photoInputRef */}
+      <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
       <input ref={diaryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleDiaryFile} />
 
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>

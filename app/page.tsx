@@ -72,6 +72,39 @@ export default function AppShell() {
     return () => subscription.unsubscribe()
   }, [router])
 
+  // Prevent back navigation out of the app
+  useEffect(() => {
+    // Root cause: Google OAuth leaves accounts.google.com in the history stack.
+    // popstate does NOT fire for cross-origin back-navigation (it's a full page
+    // unload), so router.replace('/') never runs and the user escapes to Google.
+    //
+    // Fix: push a large buffer of same-origin '/' entries. Each "back" press
+    // hits a '/' entry (same-origin → popstate fires), and we immediately push
+    // a new one to replenish, so the user is locked to '/' indefinitely.
+    const BUFFER = 30
+    window.history.replaceState({ milakya: true }, '', '/')
+    for (let i = 0; i < BUFFER; i++) {
+      window.history.pushState({ milakya: true }, '', '/')
+    }
+
+    const handlePop = () => {
+      // Each intercepted back-press: push a fresh entry to keep the buffer full
+      window.history.pushState({ milakya: true }, '', '/')
+    }
+
+    window.addEventListener('popstate', handlePop)
+    return () => window.removeEventListener('popstate', handlePop)
+  }, []) // intentionally no deps — runs once on mount, needs no router ref
+
+  // Warm up API routes on app load to avoid cold-start lag on first scan/search
+  useEffect(() => {
+    const routes = ['/api/scan/photo', '/api/scan/diary', '/api/search/semantic']
+    routes.forEach(route => 
+      fetch(route, { method: 'POST', body: '{}' })
+        .catch(() => {}) // fire-and-forget, ignore errors
+    )
+  }, [])
+
   function handleTabChange(index: number) {
     setActiveTab(index)
     if (sliderRef.current) {
@@ -106,7 +139,11 @@ export default function AppShell() {
                 {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} onMutated={handleItemAdded} />
                 : i === 1 ? <SearchScreen onMutated={handleItemAdded} refreshKey={searchKey} />
                 : i === 2 ? <ScanScreen onAdded={handleItemAdded} />
-                : i === 3 ? <GharScreen isVisible={activeTab === 3} onActiveHomeChanged={handleItemAdded} refreshKey={refreshKey} />
+                :i === 3 ? <GharScreen 
+                  isVisible={activeTab === 3 || showWalkthrough} 
+                  onActiveHomeChanged={handleItemAdded} 
+                  refreshKey={refreshKey} 
+                />
                 : <ProfileScreen refreshKey={refreshKey}/>}
               </div>
             ))}
@@ -134,6 +171,7 @@ export default function AppShell() {
                 localStorage.setItem('milakya_onboarded', '1')
                 setShowOnboarding(false)
                 setRefreshKey(k => k + 1)
+                handleTabChange(3) 
                 setShowWalkthrough(true)
               }} />
             </div>
@@ -143,7 +181,11 @@ export default function AppShell() {
             <AppWalkthrough
               containerRef={appContainerRef}
               onTabChange={handleTabChange}
-              onDone={() => { setShowWalkthrough(false); handleTabChange(0) }}
+              onDone={() => { 
+                localStorage.setItem('milakya_walkthrough_seen', '1')
+                setShowWalkthrough(false)
+                handleTabChange(0) 
+              }}
             />
           )}
         </div>
