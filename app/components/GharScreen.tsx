@@ -117,57 +117,95 @@ export function GharScreen({ isVisible, onActiveHomeChanged, refreshKey }: {
           )
         })()}
 
-        {/* Other homes */}
+        {/* Other homes — FIX 4: Two-row layout prevents overflow on narrow/small-AR screens */}
         {otherHomes.map((home) => {
           const HIcon = getHomeIcon(home.icon ?? 'home')
           return (
             <div key={home.id} className="press-scale"
-              style={{ background: 'var(--bg-surface)', borderRadius: 18, border: '1px solid var(--border-soft)', padding: '14px 16px', boxShadow: '0 1px 4px rgba(42,27,16,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
+              style={{
+                background: 'var(--bg-surface)', borderRadius: 18,
+                border: '1px solid var(--border-soft)', padding: '14px 16px',
+                boxShadow: '0 1px 4px rgba(42,27,16,0.07)', cursor: 'pointer',
+              }}
             >
-              <div onClick={() => openHomeDetail(home)} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+              {/* Top row: icon + name + city (tap → detail sheet) */}
+              <div onClick={() => openHomeDetail(home)}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}
+              >
                 <div style={{
                   width: 44, height: 44, borderRadius: 12,
-                  background: 'var(--bg-elevated)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  background: 'var(--bg-elevated)', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <HIcon size={22} strokeWidth={1.7} color="var(--text-secondary)" />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
                     {home.name}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                  <div style={{
+                    fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
                     {home.city ?? t('ghar.noCity')} · {t('common.items', itemCounts[home.id] ?? 0)}
                   </div>
                 </div>
               </div>
 
-              {/* Set active button */}
-              <button
-                onClick={(e) => { e.stopPropagation(); handleSetActive(home.id) }}
-                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0 }}
-              >
-                {t('ghar.goHere')}
-              </button>
-
-              {/* Delete — inline confirm */}
-              {pendingDeleteId === home.id ? (
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button onClick={(e) => { e.stopPropagation(); setPendingDeleteId(null) }}
-                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    {t('ghar.deleteNo')}
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(home.id) }}
-                    style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#B91C1C', cursor: 'pointer' }}>
-                    {t('ghar.deleteYes')}
-                  </button>
-                </div>
-              ) : (
-                <button onClick={(e) => { e.stopPropagation(); setPendingDeleteId(home.id) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                  <Trash2 size={16} strokeWidth={1.8} color="var(--text-tertiary)" />
+              {/* Bottom row: action buttons — always on their own line, never overflow */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                {/* Set active */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSetActive(home.id) }}
+                  style={{
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)',
+                    borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 500,
+                    color: 'var(--text-secondary)', cursor: 'pointer',
+                  }}
+                >
+                  {t('ghar.goHere')}
                 </button>
-              )}
+
+                {/* Delete — inline confirm */}
+                {pendingDeleteId === home.id ? (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPendingDeleteId(null) }}
+                      style={{
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)',
+                        borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 500,
+                        color: 'var(--text-secondary)', cursor: 'pointer',
+                      }}
+                    >
+                      {t('ghar.deleteNo')}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(home.id) }}
+                      style={{
+                        background: '#FEE2E2', border: '1px solid #FCA5A5',
+                        borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600,
+                        color: '#B91C1C', cursor: 'pointer',
+                      }}
+                    >
+                      {t('ghar.deleteYes')}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPendingDeleteId(home.id) }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '5px 8px', display: 'flex', alignItems: 'center',
+                    }}
+                  >
+                    <Trash2 size={16} strokeWidth={1.8} color="var(--text-tertiary)" />
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}

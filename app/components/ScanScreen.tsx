@@ -18,7 +18,8 @@ import { getRoomsByHome, createRoom } from '@/lib/rooms'
 import { getHomeIcon } from '@/lib/homeIcons'
 import type { Home, Room } from '@/lib/types'
 
-export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
+// FIX 1: Added refreshKey prop so homes re-fetch on any mutation from AppShell
+export function ScanScreen({ onAdded, refreshKey }: { onAdded?: () => void; refreshKey?: number }) {
   const photoInputRef = useRef<HTMLInputElement>(null)
   const diaryInputRef = useRef<HTMLInputElement>(null)
   const { trigger } = useAck()
@@ -42,6 +43,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
   const [photoResults, setPhotoResults]           = useState<DetectedItem[]>([])
   const [photoSheetOpen, setPhotoSheetOpen]       = useState(false)
   const [selectedPhotoIdxs, setSelectedPhotoIdxs] = useState<Set<number>>(new Set())
+  // FIX 3: Per-item room assignment for photo scan
+  const [photoItemRooms, setPhotoItemRooms] = useState<Record<number, string>>({})
 
   const [diaryResults, setDiaryResults]           = useState<DiaryItem[]>([])
   const [diarySheetOpen, setDiarySheetOpen]       = useState(false)
@@ -50,6 +53,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
   const [selectedItem, setSelectedItem] = useState<DetectedItem | null>(null)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
 
+  // FIX 1: refreshKey in deps — re-fetches homes whenever a home is added/changed anywhere
   useEffect(() => {
     getHomes().then((h) => {
       setHomes(h)
@@ -59,7 +63,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         setBulkHomeId(active.id)
       }
     }).catch(() => {})
-  }, [])
+  }, [refreshKey])
 
   useEffect(() => {
     if (!activeHomeId) return
@@ -72,9 +76,15 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
     setBulkRoomId('')
   }, [bulkHomeId])
 
+  // FIX 3: Reset per-item rooms whenever the location step is entered
+  useEffect(() => {
+    if (bulkLocStep === 'photo') setPhotoItemRooms({})
+  }, [bulkLocStep])
+
   function resetBulkLocation() {
     setBulkLocStep(null)
     setBulkRoomId('')
+    setPhotoItemRooms({})
   }
 
   function toBase64(file: File): Promise<string> {
@@ -177,7 +187,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
           category: item.category ?? t('common.other'),
           is_important: false,
           home_id: targetHomeId,
-          room_id: bulkRoomId || undefined,
+          // FIX 3: per-item room takes priority over the global default room
+          room_id: photoItemRooms[i] || bulkRoomId || undefined,
         })
       }))
       setPhotoSheetOpen(false)
@@ -207,10 +218,10 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
       )
 
       for (const hint of hints) {
+        // FIX 2: Exact case-insensitive match only.
+        // Old code used substring includes() which made "Bedroom 2" match "Bedroom".
         const matched = bulkRooms.find(
-          (r) =>
-            r.name.toLowerCase().includes(hint.toLowerCase()) ||
-            hint.toLowerCase().includes(r.name.toLowerCase())
+          (r) => r.name.toLowerCase() === hint.toLowerCase()
         )
         if (matched) {
           roomMap[hint.toLowerCase()] = matched.id
@@ -255,7 +266,8 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
   }
 
   // ── Shared LocationPicker — renders as sheet footer ────────────────────────
-  function LocationPicker({ onConfirm, count }: { onConfirm: () => void; count: number }) {
+  // FIX 3: Added `type` prop so photo shows "Default room" label vs diary's normal label
+  function LocationPicker({ onConfirm, count, type }: { onConfirm: () => void; count: number; type: 'photo' | 'diary' }) {
     return (
       <div style={{
         padding: '14px 20px 20px',
@@ -297,7 +309,9 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
           })}
         </div>
 
-        {/* Room dropdown */}
+        {/* Room dropdown:
+            - diary: primary room picker (AI room hints will override per-item anyway)
+            - photo: acts as "default room for all" fallback; per-item selectors in the list override this */}
         {bulkRooms.length > 0 && (
           <select
             value={bulkRoomId}
@@ -309,7 +323,9 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
               fontFamily: 'Inter, sans-serif', outline: 'none',
             }}
           >
-            <option value="">{t('scan.location.roomPlaceholder')}</option>
+            <option value="">
+              {type === 'photo' ? '— Default room for all (optional) —' : t('scan.location.roomPlaceholder')}
+            </option>
             {bulkRooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         )}
@@ -459,7 +475,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         footer={
           selectedPhotoIdxs.size > 0
             ? bulkLocStep === 'photo'
-              ? <LocationPicker count={selectedPhotoIdxs.size} onConfirm={bulkAddPhoto} />
+              ? <LocationPicker count={selectedPhotoIdxs.size} onConfirm={bulkAddPhoto} type="photo" />
               : <BulkBar count={selectedPhotoIdxs.size} type="photo" />
             : undefined
         }
@@ -485,24 +501,49 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
               const checked = selectedPhotoIdxs.has(i)
               return (
                 <div key={i} onClick={() => togglePhoto(i)} className="press-scale"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: checked ? 'var(--primary-pale)' : 'var(--bg-elevated)', borderRadius: 14, padding: '12px 14px', cursor: 'pointer', border: checked ? '1.5px solid var(--primary)' : '1px solid var(--border-soft)', transition: 'background 150ms, border-color 150ms' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 24, flexShrink: 0 }}>{item.emoji ?? '📦'}</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</div>
-                      {item.name_hi && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.name_hi}</div>}
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{item.category} · {t('scan.confidence', { pct: Math.round(item.confidence * 100) })}</div>
+                  style={{ background: checked ? 'var(--primary-pale)' : 'var(--bg-elevated)', borderRadius: 14, padding: '12px 14px', cursor: 'pointer', border: checked ? '1.5px solid var(--primary)' : '1px solid var(--border-soft)', transition: 'background 150ms, border-color 150ms' }}>
+                  {/* Main info row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 24, flexShrink: 0 }}>{item.emoji ?? '📦'}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</div>
+                        {item.name_hi && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.name_hi}</div>}
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{item.category} · {t('scan.confidence', { pct: Math.round(item.confidence * 100) })}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {checked
+                        ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} />
+                        : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />
+                      }
+                      <button onClick={(e) => { e.stopPropagation(); openSinglePhoto(item) }} style={singleAddBtn} title={t('scan.results.addFull')}>
+                        <Plus size={14} strokeWidth={2.2} color="var(--primary)" />
+                      </button>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {checked
-                      ? <CheckSquare size={18} color="var(--primary)" strokeWidth={2} />
-                      : <Square size={18} color="var(--text-tertiary)" strokeWidth={1.8} />
-                    }
-                    <button onClick={(e) => { e.stopPropagation(); openSinglePhoto(item) }} style={singleAddBtn} title={t('scan.results.addFull')}>
-                      <Plus size={14} strokeWidth={2.2} color="var(--primary)" />
-                    </button>
-                  </div>
+                  {/* FIX 3: Per-item room selector — shown per checked item when location step is active */}
+                  {bulkLocStep === 'photo' && checked && bulkRooms.length > 0 && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(200,96,58,0.12)' }}>
+                      <select
+                        value={photoItemRooms[i] ?? ''}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          setPhotoItemRooms(prev => ({ ...prev, [i]: e.target.value }))
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          width: '100%', padding: '7px 10px', borderRadius: 10,
+                          border: '1px solid var(--border-soft)', background: 'var(--bg-surface)',
+                          fontSize: 12, color: photoItemRooms[i] ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                          fontFamily: 'Inter, sans-serif', outline: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        <option value="">— Room for this item —</option>
+                        {bulkRooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )
             })
@@ -519,7 +560,7 @@ export function ScanScreen({ onAdded }: { onAdded?: () => void }) {
         footer={
           selectedDiaryIdxs.size > 0
             ? bulkLocStep === 'diary'
-              ? <LocationPicker count={selectedDiaryIdxs.size} onConfirm={bulkAddDiary} />
+              ? <LocationPicker count={selectedDiaryIdxs.size} onConfirm={bulkAddDiary} type="diary" />
               : <BulkBar count={selectedDiaryIdxs.size} type="diary" />
             : undefined
         }

@@ -140,7 +140,7 @@ export default function AppShell() {
                 <div key={i} className="tab-slide scrollbar-hide">
                   {i === 0 ? <HomeScreen key={refreshKey} onViewAll={() => handleTabChange(1)} onMutated={handleItemAdded} />
                   : i === 1 ? <SearchScreen onMutated={handleItemAdded} refreshKey={searchKey} />
-                  : i === 2 ? <ScanScreen onAdded={handleItemAdded} />
+                  : i === 2 ? <ScanScreen onAdded={handleItemAdded} refreshKey={searchKey} />
                   :i === 3 ? <GharScreen 
                     isVisible={activeTab === 3 || showWalkthrough} 
                     onActiveHomeChanged={handleItemAdded} 

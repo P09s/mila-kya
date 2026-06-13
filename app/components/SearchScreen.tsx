@@ -199,7 +199,7 @@ export function SearchScreen({ onMutated, refreshKey = 0 }: { onMutated?: () => 
       {/* Results header */}
       <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-          {query ? `"${query}" ${t('search.results')}` : t('search.allItems')}
+          {query ? t('search.results', { query }) : t('search.allItems')}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {semanticLoading && (
