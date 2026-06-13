@@ -53,18 +53,32 @@ export function ScanScreen({ onAdded, refreshKey }: { onAdded?: () => void; refr
   const [selectedItem, setSelectedItem] = useState<DetectedItem | null>(null)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
 
-  // FIX 1: refreshKey in deps — re-fetches homes whenever a home is added/changed anywhere
+  // REPLACE this one useEffect:
   useEffect(() => {
-    getHomes().then((h) => {
-      setHomes(h)
-      const active = h.find((x) => x.is_active) ?? h[0]
-      if (active) {
-        setActiveHomeId(active.id)
-        setBulkHomeId(active.id)
-      }
-    }).catch(() => {})
+    let cancelled = false
+
+    async function loadHomes(retries = 3) {
+      try {
+        const h = await getHomes()
+        if (cancelled) return
+        if (h.length === 0 && retries > 0) {
+          setTimeout(() => loadHomes(retries - 1), 800)
+          return
+        }
+        setHomes(h)
+        const active = h.find((x) => x.is_active) ?? h[0]
+        if (active) {
+          setActiveHomeId(active.id)
+          setBulkHomeId(active.id)
+        }
+      } catch {}
+    }
+
+    loadHomes()
+    return () => { cancelled = true }
   }, [refreshKey])
 
+  // KEEP these three exactly as they are ↓
   useEffect(() => {
     if (!activeHomeId) return
     getRoomsByHome(activeHomeId).then(setActiveHomeRooms).catch(() => {})
@@ -76,7 +90,6 @@ export function ScanScreen({ onAdded, refreshKey }: { onAdded?: () => void; refr
     setBulkRoomId('')
   }, [bulkHomeId])
 
-  // FIX 3: Reset per-item rooms whenever the location step is entered
   useEffect(() => {
     if (bulkLocStep === 'photo') setPhotoItemRooms({})
   }, [bulkLocStep])
@@ -349,19 +362,27 @@ export function ScanScreen({ onAdded, refreshKey }: { onAdded?: () => void; refr
   }
 
   // ── Bulk bar (before location is chosen) ──────────────────────────────────
-  function BulkBar({ count, type }: { count: number; type: 'photo' | 'diary' }) {
-    return (
-      <div style={{ padding: '10px 20px 20px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-soft)' }}>
-        <button
-          onClick={() => setBulkLocStep(type)}
-          style={bulkBtnStyle}
-        >
-          <MapPin size={15} strokeWidth={2.2} color="#FAF6F0" />
-          {t('scan.location.addBtn', count)}
-        </button>
-      </div>
-    )
-  }
+  // Replace setBulkLocStep calls in BulkBar:
+function BulkBar({ count, type }: { count: number; type: 'photo' | 'diary' }) {
+  return (
+    <div style={{ padding: '10px 20px 20px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-soft)' }}>
+      <button
+        onClick={async () => {
+          // Re-fetch homes fresh right before showing LocationPicker
+          const h = await getHomes()
+          setHomes(h)
+          const active = h.find((x) => x.is_active) ?? h[0]
+          if (active && !bulkHomeId) setBulkHomeId(active.id)
+          setBulkLocStep(type)
+        }}
+        style={bulkBtnStyle}
+      >
+        <MapPin size={15} strokeWidth={2.2} color="#FAF6F0" />
+        {t('scan.location.addBtn', count)}
+      </button>
+    </div>
+  )
+}
 
   return (
     <>
@@ -475,7 +496,7 @@ export function ScanScreen({ onAdded, refreshKey }: { onAdded?: () => void; refr
         footer={
           selectedPhotoIdxs.size > 0
             ? bulkLocStep === 'photo'
-              ? <LocationPicker count={selectedPhotoIdxs.size} onConfirm={bulkAddPhoto} type="photo" />
+              ? <LocationPicker key={homes.length} count={selectedPhotoIdxs.size} onConfirm={bulkAddPhoto} type="photo" />
               : <BulkBar count={selectedPhotoIdxs.size} type="photo" />
             : undefined
         }
@@ -560,7 +581,7 @@ export function ScanScreen({ onAdded, refreshKey }: { onAdded?: () => void; refr
         footer={
           selectedDiaryIdxs.size > 0
             ? bulkLocStep === 'diary'
-              ? <LocationPicker count={selectedDiaryIdxs.size} onConfirm={bulkAddDiary} type="diary" />
+              ? <LocationPicker key={homes.length} count={selectedDiaryIdxs.size} onConfirm={bulkAddDiary} type="diary" />
               : <BulkBar count={selectedDiaryIdxs.size} type="diary" />
             : undefined
         }

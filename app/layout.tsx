@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from 'next'
-import { Outfit, Inter } from 'next/font/google'   // ← add this
+import { Outfit, Inter } from 'next/font/google'
 import './globals.css'
 
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })  // ← add
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })     // ← add
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'MilaKya — Apna saman, apni jagah',
+  title: 'MilaKya',
   description: 'Track your belongings across multiple homes — Ghar, PG, Sasural, Maika',
   manifest: '/manifest.json',
   appleWebApp: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#FAF6F0',
+  themeColor: '#C8603A',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${inter.variable}`}>  {/* ← update */}
+      <body className={`${outfit.variable} ${inter.variable}`}>
         {children}
       </body>
     </html>

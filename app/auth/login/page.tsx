@@ -56,19 +56,24 @@ export default function LoginPage() {
     setSuccessMsg('')
     const supabase = createClient()
     if (mode === 'register') {
-      const { error: err } = await supabase.auth.signUp({ email, password })
+      const { data, error: err } = await supabase.auth.signUp({ email, password })
       setLoading(false)
       if (err) {
         setError(err.message)
-      } else {
-        setSuccessMsg('Account ban gaya! Ab login karo.')
+      } else if (data.user?.identities?.length === 0) {
+        setError('Yeh email pehle se registered hai. Login karo.')
         setMode('login')
+      } else {
+        setSuccessMsg('📧 Confirmation email bheja gaya! Inbox check karo, link click karo, phir login karo.')
       }
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      setLoading(false)
       if (err) {
-        setError('Email ya password galat hai')
+        if (err.message.includes('Email not confirmed')) {
+          setError('📧 Email verify nahi hua — inbox mein confirmation link check karo')
+        } else {
+          setError('Email ya password galat hai')
+        }
       } else {
         router.replace('/')
       }
@@ -168,7 +173,11 @@ export default function LoginPage() {
       </div>
 
       <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 20, textAlign: 'center', maxWidth: 300 }}>
-        Login karke aap hamare Terms & Privacy Policy se agree karte hain
+        Login karke aap hamare{' '}
+        <a href="/terms" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Terms</a>
+        {' '}&{' '}
+        <a href="/privacy" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Privacy Policy</a>
+        {' '}se agree karte hain
       </p>
     </div>
   )
